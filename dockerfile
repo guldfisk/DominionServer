@@ -5,7 +5,7 @@ MAINTAINER Oliver Nybroe <olivernybroe@gmail.com>
 VOLUME ["/data"]
 EXPOSE 6700
 
-ADD * /tmp/
+COPY . /temp/
 RUN chmod 755 -R /tmp/
 
 RUN pip install numpy
