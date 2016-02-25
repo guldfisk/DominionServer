@@ -9,3 +9,4 @@ ADD * /tmp/
 RUN chmod 755 -R /tmp/
 
 CMD ["python", "/tmp/domServer.py"]
+
