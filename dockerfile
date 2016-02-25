@@ -8,5 +8,4 @@ EXPOSE 6700
 ADD * /tmp/
 RUN chmod 755 -R /tmp/
 
-CMD ["python", "/tmp/domServer.py"]
-
+CMD ["python", "/tmp/t04.py"]
