@@ -8,4 +8,6 @@ EXPOSE 6700
 ADD * /tmp/
 RUN chmod 755 -R /tmp/
 
+pip install numpy
+
 CMD ["python", "/tmp/t04.py"]
