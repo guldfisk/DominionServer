@@ -8,6 +8,6 @@ EXPOSE 6700
 ADD * /tmp/
 RUN chmod 755 -R /tmp/
 
-CMD ["pip", "install numpy"]
+run pip install numpy
 
 CMD ["python", "/tmp/domServer.py"]
