@@ -10,4 +10,4 @@ RUN chmod 755 -R /tmp/
 
 CMD ["pip", "install numpy"]
 
-CMD ["python", "/tmp/t04.py"]
+CMD ["python", "/tmp/domServer.py"]
