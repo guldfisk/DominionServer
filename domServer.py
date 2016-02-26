@@ -78,9 +78,9 @@ class OnlinePlayer(server.CST):
 			#game = Game(players=[server.csts[key] for key in server.csts])
 			for player in game.players:	player.game = game
 			game.makePiles(baseSetBase)
-			#options = baseSet+prosperity+seaside
+			options = baseSet+prosperity+seaside
 			game.makePiles(random.sample(options, 10))
-			game.makePiles(options)
+			#game.makePiles(options)
 			game.makeStartDeck()
 			gT = traa(game.start)
 			gT.start()
