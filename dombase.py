@@ -544,12 +544,12 @@ class Traveler(CardAdd):
 		self.types.append('TRAVELER')
 		self.morph = None
 	def onDestroy(self, player, **kwargs):
-		if not (player.game.NSPiles[self.morph.name].viewTop() and player.user(('no', 'yes'), 'Upgrade traveler')): return
+		if not (player.game.NSPiles[self.morph.name].viewTop() and player.user(('no', 'yes'), 'Upgrade '+self.name)): return
 		for i in range(len(player.inPlay)):
 			if player.inPlay[i]==self:
 				player.returnCard(player.inPlay.pop(i))
 				break
-		player.gainFromPile(player.game.NSPiles[self.morph.name])
+		player.takeFromPile(player.game.NSPiles[self.morph.name])
 	def onPileCreate(self, pile, game, **kwargs):
 		super(Traveler, self).onPileCreate(pile, game, **kwargs)
 		game.require(self.morph)

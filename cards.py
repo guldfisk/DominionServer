@@ -1483,24 +1483,85 @@ class TreasureHunter(Action, Traveler, CardAdd):
 		Traveler.onPlay(self, player, **kwargs)
 		player.addCoin()
 		player.addAction()
-		previousPlayer
+		previousPlayer = None
 		for i in range(len(player.game.events)-1, -1, -1):
-			if player.game.events[i][0]=='startTurn' and player.game.event[i][1]['player']!=player:
+			if player.game.events[i][0]=='startTurn' and player.game.events[i][1]['player']!=player:
 				previousPlayer = player.game.events[i][1]['player']
 				for n in range(i, len(player.game.events)):
 					if player.game.events[n][0]=='gain' and player.game.events[n][1]['player']==previousPlayer: player.gainFromPile(player.game.piles['Silver'])
 					elif player.game.events[n][0]=='endTurn': return
+	def onPileCreate(self, pile, game, **kwargs):
+		game.require(self.morph)
+		for i in range(5): pile.append(type(self)(game))
 				
 class Warrior(Action, Traveler, Attack, CardAdd):
 	name = 'Warrior'
 	def __init__(self, game, **kwargs):
-		super(TreasureHunter, self).__init__(game, **kwargs)
+		super(Warrior, self).__init__(game, **kwargs)
 		Traveler.__init__(self, game, **kwargs)
 		Attack.__init__(self, game, **kwargs)
-		self.morph = Warrior 
-		self.price = 3
+		self.morph = Hero 
+		self.price = 4
 	def onPlay(self, player, **kwargs):
-		super(TreasureHunter, self).onPlay(player, **kwargs)
+		super(Warrior, self).onPlay(player, **kwargs)
 		Traveler.onPlay(self, player, **kwargs)
+		player.draw(amnt=2)
+		travelers = 0
+		for card in player.inPlay:
+			if 'TRAVELER' in card.types: travelers += 1
+		for aplayer in player.game.getPlayers(player):
+			if aplayer==player: continue
+			aplayer.attack(self.attack, self, amnt=travelers)
+	def attack(self, player, **kwargs):
+		for i in range(kwargs['amnt']):
+			card = player.getCard()
+			if not card: break
+			player.discardCard(card)
+			if not (card.getPrice(player) in (3, 4) and card.getPotionPrice(player)==0): continue
+			for i in range(len(player.discardPile)-1, -1, -1):
+				if player.discardPile[i]==card: player.trashCard(player.discardPile.pop(i))
+	def onPileCreate(self, pile, game, **kwargs):
+		game.require(self.morph)
+		for i in range(5): pile.append(type(self)(game))
 				
-adventures = [CoinOfTheRealm]
+class Hero(Action, Traveler, CardAdd):
+	name = 'Hero'
+	def __init__(self, game, **kwargs):
+		super(Hero, self).__init__(game, **kwargs)
+		Traveler.__init__(self, game, **kwargs)
+		self.morph = Champion 
+		self.price = 5
+	def onPlay(self, player, **kwargs):
+		super(Hero, self).onPlay(player, **kwargs)
+		player.addCoin(amnt=2)
+		options = []
+		for pile in player.game.piles:
+			if player.game.piles[pile].viewTop() and 'TREASURE' in player.game.piles[pile].viewTop().types: options.append(pile)
+		if not options: return
+		choice = player.user(options, 'Choose gain')
+		player.gainFromPile(player.game.piles[options[choice]])
+	def onPileCreate(self, pile, game, **kwargs):
+		game.require(self.morph)
+		for i in range(5): pile.append(type(self)(game))
+		
+class Champion(Action, Duration, CardAdd):
+	name = 'Champion'
+	def __init__(self, game, **kwargs):
+		super(Champion, self).__init__(game, **kwargs)
+		Duration.__init__(self, game, **kwargs)
+		self.price = 6
+	def onPlay(self, player, **kwargs):
+		super(Champion, self).onPlay(player, **kwargs)
+		player.addAction()
+		player.game.dp.connect(self.defence, signal='attack')
+		player.game.dp.connect(self.addAction, signal='playAction')
+	def defence(self, signal, **kwargs):
+		if kwargs['player']==self.owner: return True
+	def addAction(self, signal, **kwargs):
+		if kwargs['player']==self.owner: self.owner.addAction()
+	def onLeavePlay(self, player, **kwargs):
+		pass
+	def onPileCreate(self, pile, game, **kwargs):
+		for i in range(5): pile.append(type(self)(game))
+		
+adventures = [CoinOfTheRealm, Page]
