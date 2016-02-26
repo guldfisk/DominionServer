@@ -653,9 +653,9 @@ class City(Action, CardAdd):
 	def onPlay(self, player, **kwargs):
 		super(City, self).onPlay(player, **kwargs)
 		player.addAction(amnt=2)
-		if len(emptyplayer.game.piles)>0:
+		if len(player.game.emptyPiles)>0:
 			player.draw(amnt=2)
-			if len(emptyplayer.game.piles)>1:
+			if len(player.game.emptyPiles)>1:
 				player.addCoin()
 				player.addBuy()
 		else: player.draw()

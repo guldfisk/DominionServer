@@ -85,11 +85,12 @@ class Game(object):
 					return
 				self.emptyDelayed()
 	def endGame(self):
-		self.dp.send(signal='gameEnd', winner=players[0], points=points)
+		self.dp.send(signal='gameEnding')
 		for player in self.players: player.endGame()
 		self.players.sort(key=lambda x: x.victories, reverse=True)
 		points = {}
-		for player in self.players: points[player] = player.victories
+		for player in self.players: points[player.name] = player.victories
+		self.dp.send(signal='gameEnd', winner=self.players[0], points=points)
 	def getNextPlayer(self, cplayer):
 		if not cplayer in self.players: return
 		if not len(self.players)>1: return cplayer
@@ -378,6 +379,7 @@ class Token(object):
 class Pile(CPile):
 	def __init__(self, cardType, game, *args, **kwargs):
 		super(Pile, self).__init__(*args, **kwargs)
+		self.game = game
 		self.cardType = cardType
 		self.terminator = kwargs.get('terminator', False)
 		self.cardType(game).onPileCreate(self, game) #X fucking D
@@ -389,10 +391,8 @@ class Pile(CPile):
 		if not self: return
 		popped = self.pop()
 		if not self:
-			emptyPiles.append(self)
-			if self.terminator:
-				global emptyTerminatorPiles
-				emptyTerminatorPiles += 1
+			self.game.emptyPiles.append(self)
+			if self.terminator: self.game.emptyTerminatorPiles += 1
 		return popped
 	def getView(self):
 		return self.name+': '+str(len(self))
