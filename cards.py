@@ -1041,7 +1041,9 @@ class Haven(Action, Duration, CardAdd):
 		if kwargs['player']==self.owner:
 			self.age+=1
 			while self.saved: self.owner.hand.append(self.saved.pop())
-
+	def onGameEnd(self, player, **kwargs):
+		while self.saved: player.library.append(self.saved.pop())
+			
 class Lighthouse(Action, Duration, CardAdd):
 	name = 'Lighthouse'
 	def __init__(self, game, **kwargs):
