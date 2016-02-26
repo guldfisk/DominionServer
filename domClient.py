@@ -96,7 +96,7 @@ def main():
 
 if __name__=='__main__':
 	HOST = 'lost-world.dk'
-	HOST = 'localhost'
+	#HOST = 'localhost'
 	#HOST = str(socket.gethostbyname(socket.gethostname()))
 	print(HOST)
 	PORT = 6700
