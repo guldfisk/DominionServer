@@ -38,8 +38,7 @@ class PPlayer(Player):
 	def answerF(self, answer):
 		self.answer = answer
 		self.useLock.release()
-		
-	
+			
 class OnlinePlayer(server.CST):
 	def __init__(self, **kwargs):
 		super(OnlinePlayer, self).__init__(**kwargs)
@@ -78,7 +77,7 @@ class OnlinePlayer(server.CST):
 			#game = Game(players=[server.csts[key] for key in server.csts])
 			for player in game.players:	player.game = game
 			game.makePiles(baseSetBase)
-			options = baseSet+prosperity+seaside
+			options = baseSet+prosperity+seaside+adventures
 			game.makePiles(random.sample(options, 10))
 			#game.makePiles(options)
 			game.makeStartDeck()

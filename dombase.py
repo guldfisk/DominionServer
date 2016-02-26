@@ -51,6 +51,7 @@ class Game(object):
 		self.trash = CPile(name='Trash')
 		self.players = kwargs.get('players', [])
 		self.piles = {}
+		self.NSPiles = {}
 		self.activePlayer = None
 		self.globalMats = {}
 		self.emptyPiles = []
@@ -59,6 +60,9 @@ class Game(object):
 		self.turnFlag = ''
 		self.round = 0
 		self.dp = dp.Dispatcher()
+	def require(self, card, **kwargs):
+		if card.name in list(self.NSPiles): return
+		self.NSPiles[card.name] = Pile(card, self)
 	def evLogger(self, signal, **kwargs):
 		self.events.append((signal, kwargs))
 	def emptyDelayed(self):
@@ -71,10 +75,10 @@ class Game(object):
 		else: endCondition = endCon
 		self.round = 0
 		self.dp.connect(self.evLogger)
+		for player in self.players: self.dp.connect(player.toPlayer)
 		self.dp.send(signal='globalSetup', players=self.players)
 		self.emptyDelayed()
-		for player in self.players:
-			player.setup(self)
+		for player in self.players: player.setup(self)
 		while True:
 			self.round+=1
 			self.dp.send(signal='beginRound', round=self.round)
@@ -169,8 +173,8 @@ class Player(object):
 		if 'hidden' in kwargs: hidden = kwargs['hidden']
 		if 'censored' in kwargs: censored = kwargs['censored']
 		for key in kwargs: 
-			if not (key=='sender' or key=='hidden' or key=='kwargs' or (hidden and hidden!=self and key in censored)):
-				s[1][key] = gN(kwargs[key])
+			if not (key=='sender' or key=='hidden' or key=='kwargs' or (hidden and hidden!=self and key in censored)): s[1][key] = gN(kwargs[key])
+		if signal=='globalSetup': s[1]['you'] = self.name
 		self.channelOut(s)
 	def getView(self):
 		return 'Hand: '+self.hand.getFullView()+'\nIn Play: '+self.inPlay.getView()+'\nDiscard: '+self.discardPile.getView()+'\nLibrary: '+self.library.getView()+'\nCoins: '+str(self.coins)+'\tActions: '+str(self.actions)+'\tBuys: '+str(self.buys)
@@ -179,7 +183,6 @@ class Player(object):
 	def setup(self, game, **kwargs):
 		game.dp.send(signal='setup', player=self)
 		self.game = game
-		game.dp.connect(self.toPlayer)
 		self.reshuffle()
 		self.draw(amnt=5)
 	def takeTurn(self, **kwargs):
@@ -244,10 +247,8 @@ class Player(object):
 	def destroyAll(self, **kwargs):
 		print('STARTDESTROYALL', [o.name for o in self.inPlay], self.inPlay)
 		for card in copy.copy(self.inPlay):
-			print(card, card.name)
 			if not card.onDestroy(self) and not self.game.dp.send(signal='destroy', player=self, card=card):
 				for i in range(len(self.inPlay)):
-					print('\t', self.inPlay[i])
 					if card==self.inPlay[i]:
 						card.onLeavePlay(self)
 						self.discardPile.append(self.inPlay.pop(i))
@@ -513,10 +514,9 @@ class Duration(object):
 	def next(self, **kwargs):
 		pass
 	
-class Reserve(object):
+class Reserve(CardAdd):
 	def __init__(self, game, **kwargs):
 		self.types.append('RESERVE')
-		addMat('Tavern')
 		self.triggerSignal = ''
 	def onPlay(self, player, **kwargs):
 		for i in range(len(player.inPlay)):
@@ -526,13 +526,32 @@ class Reserve(object):
 		player.game.dp.connect(self.trigger, signal=self.triggerSignal)
 	def trigger(self, signal, **kwargs):
 		if not self.owner.user(('no', 'yes'), 'Call '+self.name): return
-		for i in range(len(player.mats['Tavern'])):
-			if player.mats['Tavern'][i]==self:
-				player.discardPile.append(player.mats['Tavern'].pop(i))
+		for i in range(len(self.owner.mats['Tavern'])):
+			if self.owner.mats['Tavern'][i]==self:
+				self.owner.inPlay.append(self.owner.mats['Tavern'].pop(i))
 				break
+		self.owner.game.dp.disconnect(self.trigger, signal=self.triggerSignal)
 		self.call(signal, **kwargs)
 	def call(self, signal, **kwargs):
 		pass
+	def onPileCreate(self, pile, game, **kwargs):
+		super(Reserve, self).onPileCreate(pile, game, **kwargs)
+		game.addMat('Tavern')
+		
+class Traveler(CardAdd):
+	def __init__(self, game, **kwargs):
+		self.types.append('TRAVELER')
+		self.morph = None
+	def onDestroy(self, player, **kwargs):
+		if not (player.game.NSPiles[self.morph.name].viewTop() and player.user(('no', 'yes'), 'Upgrade traveler')): return
+		for i in range(len(player.inPlay)):
+			if player.inPlay[i]==self:
+				player.returnCard(player.inPlay.pop(i))
+				break
+		player.gainFromPile(player.game.NSPiles[self.morph.name])
+	def onPileCreate(self, pile, game, **kwargs):
+		super(Traveler, self).onPileCreate(pile, game, **kwargs)
+		game.require(self.morph)
 		
 if __name__=='__main__':
 	random.seed()

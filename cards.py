@@ -1441,6 +1441,24 @@ class Outpost(Action, Duration, CardAdd):
 		kwargs['player'].treasurePhase()
 		kwargs['player'].buyPhase()
 		kwargs['player'].endTurn()
-
 			
 seaside = [Embargo, Haven, Lighthouse, NativeVillage, FishingVillage, Lookout, Smugglers, Caravan, Cutpurse, Island, Navigator, PirateShip, Salvager, SeaHag, TreasureMap, Bazaar, Explorer, GhostShip, MerchantShip, Outpost, Tactician, Treasury]
+
+class CoinOfTheRealm(Treasure, Reserve, CardAdd):
+	name = 'Coin of the Realm'
+	def __init__(self, game, **kwargs):
+		super(CoinOfTheRealm, self).__init__(game, **kwargs)
+		Reserve.__init__(self, game, **kwargs)
+		self.triggerSignal = 'playAction'
+		self.value = 1
+	def onPlay(self, player, **kwargs):
+		super(CoinOfTheRealm, self).onPlay(player, **kwargs)
+		Reserve.onPlay(self, player, **kwargs)
+	def call(self, signal, **kwargs):
+		self.owner.addAction(amnt=2)
+		
+class Page(Action, Traveler):
+	def __init__(self, game, **kwargs):
+		super(Page, self).__init__(game, **kwargs)
+		
+adventures = [CoinOfTheRealm]

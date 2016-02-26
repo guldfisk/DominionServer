@@ -3,9 +3,17 @@ import threading
 import struct
 import pickle
 import re
+import wave
+import pyaudio
 
 s = None
 
+def readWav(name):
+	wf = wave.open(name, 'rb')
+	return wf.readframes(wf.getnframes())
+
+notification = readWav('Resources\\Bass_drum_2.wav')
+	
 def gN(ob):
 	if hasattr(ob, 'playerName'): return ob.playerName
 	elif hasattr(ob, 'name'): return ob.name
@@ -33,19 +41,33 @@ class traa(threading.Thread):
 	def run(self):
 		self.f(**self.vals)
 
+def play(**kwargs):  
+	p = pyaudio.PyAudio() 
+	mfrate = 44100
+	stream = p.open(format = 8, channels = 1, rate = mfrate, output = True)
+	stream.write(kwargs['sound'])
+	stream.stop_stream()  
+	stream.close()  
+	p.terminate()
+		
+def playSound(sound):
+	pt = traa(play, sound=sound)
+	pt.start()
+		
 def request(head):
 	s.send(('requ'+head).encode('UTF-8'))
 		
+me = None
+		
 def updt(signal, **kwargs):
+	global me
 	if signal=='startTurn':
 		print('-'*36)
+		if kwargs['player']==me: playSound(notification)
+	if signal=='globalSetup':
+		if 'you' in kwargs: me = kwargs['you']
 	elif signal=='beginRound':
 		print('*'*36)
-	#elif signal=='actionPhase':
-	#	request('stat')
-	#elif signal=='buyPhase':
-	#	request('king')
-	#	request('stat')
 	print('>'+signal, end='::'+' '*(18-len(signal)))
 	for key in kwargs:
 		if key=='sender': continue
@@ -57,29 +79,33 @@ def answer(**kwargs):
 	
 def lyt(**kwargs):
 	while True:
-		try:
-			head = s.recv(4).decode('UTF-8')
-			if head=='ques':
-				length = struct.unpack('I', s.recv(4))[0]
-				recieved = s.recv(length)
-				if not len(recieved)==length:
-					print('lost package')
-					continue
-				upickle = pickle.loads(recieved)
-				aF = traa(answer, name=upickle[0], options=upickle[1])
-				aF.start()
-			elif head=='updt':
-				length = struct.unpack('I', s.recv(4))[0]
-				recieved = s.recv(length)
-				if not len(recieved)==length:
-					print('lost package')
-					continue
-				l = pickle.loads(recieved)
-				updt(l[0], **l[1])
-			elif head=='resp':
-				length = struct.unpack('I', s.recv(4))[0]
-				print(s.recv(length).decode('UTF-8'))
-		except: pass
+
+		head = s.recv(4).decode('UTF-8')
+		if head=='ques':
+			length = struct.unpack('I', s.recv(4))[0]
+			recieved = s.recv(length)
+			if not len(recieved)==length:
+				print('lost package')
+				continue
+			upickle = pickle.loads(recieved)
+			aF = traa(answer, name=upickle[0], options=upickle[1])
+			aF.start()
+		elif head=='updt':
+			length = struct.unpack('I', s.recv(4))[0]
+			recieved = s.recv(length)
+			if not len(recieved)==length:
+				print('lost package')
+				continue
+			l = pickle.loads(recieved)
+			updt(l[0], **l[1])
+		elif head=='resp':
+			recieved = s.recv(4)
+			if not len(recieved)==4:
+				print('lost package')
+				continue
+			length = struct.unpack('I', recieved)[0]
+			print(s.recv(length).decode('UTF-8'))
+
 		
 def tilServer(**kwargs):
 	toServer = input(': ')
@@ -95,8 +121,9 @@ def main():
 	ts.start()
 
 if __name__=='__main__':
-	HOST = 'lost-world.dk'
-	HOST = 'localhost'
+	HOST = input('connect to: ')
+	if HOST=='': HOST = 'localhost'
+	#HOST = 'localhost'
 	#HOST = str(socket.gethostbyname(socket.gethostname()))
 	print(HOST)
 	PORT = 6700
