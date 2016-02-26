@@ -330,18 +330,19 @@ class Player(object):
 	def give(self, card, **kwargs):
 		self.discardPile.append(card)
 		card.owner = self
-	def take(self, pile, **kwargs):
+	def take(self, card, **kwargs):
 		self.game.dp.send(signal='take', player=self, pile=pile)
-		cardGained = pile.gain()
 		cardGained.owner = self
 		cardGained.onGain(self)
-		self.discardPile.append(cardGained)
+		kwargs.get('to', self.discardPile).append(card)
 	def gain(self, card, **kwargs):
 		if card and not card.onGain(self) and not self.game.dp.send(signal='gain', player=self, card=card, fromz=kwargs.get('fromz', None), kwargs=kwargs):
 			card.owner = self
 			kwargs.get('to', self.discardPile).append(card)
 	def gainFromPile(self, pile, **kwargs):
 		self.gain(pile.gain(), fromz=pile, **kwargs)
+	def takeFromPile(self, pile, **kwargs):
+		self.take(pile.gain(), fromz=pile, **kwargs)
 	def buy(self, pile, **kwargs):
 		if pile and self.buys>0 and pile[-1].getPrice(self)<=self.coins and pile[-1].getPotionPrice(self)<=self.potions and not self.game.dp.send(signal='tryBuy', player=self, pile=pile, card = pile.viewTop()):
 			self.game.dp.send(signal='buy', player=self, pile=pile, card = pile.viewTop())

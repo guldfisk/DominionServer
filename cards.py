@@ -836,9 +836,9 @@ class GrandMarket(Action, CardAdd):
 		player.addAction()
 		player.addCoin(amnt=2)
 	def trigger(self, signal, **kwargs):
-		if kwargs['player']==self.owner and 'pile' in kwargs and not self==kwargs['pile'].viewTop():
-			for card in self.owner.inPlay:
-				if card.name=='Copper': return True
+		if not self==kwargs['card']: return
+		for card in kwargs['player'].inPlay:
+			if card.name=='Copper': return True
 		
 class Hoard(Treasure, CardAdd):
 	name = 'Hoard'
@@ -1451,14 +1451,56 @@ class CoinOfTheRealm(Treasure, Reserve, CardAdd):
 		Reserve.__init__(self, game, **kwargs)
 		self.triggerSignal = 'playAction'
 		self.value = 1
+		self.price = 2
 	def onPlay(self, player, **kwargs):
 		super(CoinOfTheRealm, self).onPlay(player, **kwargs)
 		Reserve.onPlay(self, player, **kwargs)
 	def call(self, signal, **kwargs):
 		self.owner.addAction(amnt=2)
 		
-class Page(Action, Traveler):
+class Page(Action, Traveler, CardAdd):
+	name = 'Page'
 	def __init__(self, game, **kwargs):
 		super(Page, self).__init__(game, **kwargs)
+		Traveler.__init__(self, game, **kwargs)
+		self.morph = TreasureHunter 
+		self.price = 2
+	def onPlay(self, player, **kwargs):
+		super(Page, self).onPlay(player, **kwargs)
+		Traveler.onPlay(self, player, **kwargs)
+		player.draw()
+		player.addAction()
 		
+class TreasureHunter(Action, Traveler, CardAdd):
+	name = 'Treasure Hunter'
+	def __init__(self, game, **kwargs):
+		super(TreasureHunter, self).__init__(game, **kwargs)
+		Traveler.__init__(self, game, **kwargs)
+		self.morph = Warrior 
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(TreasureHunter, self).onPlay(player, **kwargs)
+		Traveler.onPlay(self, player, **kwargs)
+		player.addCoin()
+		player.addAction()
+		previousPlayer
+		for i in range(len(player.game.events)-1, -1, -1):
+			if player.game.events[i][0]=='startTurn' and player.game.event[i][1]['player']!=player:
+				previousPlayer = player.game.events[i][1]['player']
+				for n in range(i, len(player.game.events)):
+					if player.game.events[n][0]=='gain' and player.game.events[n][1]['player']==previousPlayer: player.gainFromPile(player.game.piles['Silver'])
+					elif player.game.events[n][0]=='endTurn': return
+				
+class Warrior(Action, Traveler, Attack, CardAdd):
+	name = 'Warrior'
+	def __init__(self, game, **kwargs):
+		super(TreasureHunter, self).__init__(game, **kwargs)
+		Traveler.__init__(self, game, **kwargs)
+		Attack.__init__(self, game, **kwargs)
+		self.morph = Warrior 
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(TreasureHunter, self).onPlay(player, **kwargs)
+		Traveler.onPlay(self, player, **kwargs)
+				
 adventures = [CoinOfTheRealm]
