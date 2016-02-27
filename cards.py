@@ -1446,6 +1446,26 @@ class Outpost(Action, Duration, CardAdd):
 			
 seaside = [Embargo, Haven, Lighthouse, NativeVillage, FishingVillage, Lookout, Smugglers, Caravan, Cutpurse, Island, Navigator, PirateShip, Salvager, SeaHag, TreasureMap, Bazaar, Explorer, GhostShip, MerchantShip, Outpost, Tactician, Treasury]
 
+class BoonToken(Token):
+	name = 'Base Boon Token'
+	def __init__(self, game, **kwargs):
+		super(PlusCard, self).__init__(game, **kwargs)
+		self.playerOwner = None
+		self.types.append('BOONTOKEN')
+	def trigger(self, signal, **kwargs):
+		if kwargs['card'].name==self.owner.cardType.name and kwargs['player']==self.playerOwner: self.boon(self.playerOwner)
+	def boon(self, player, **kwargs):
+		pass
+	def onAddPile(self, pile, **kwargs):
+		pile.game.dp.connect(self.trigger, signal='playAction')
+	def onLeavePile(self, pile, **kwargs):
+		pile.game.dp.diccnnect(self.trigger, signal='playAction')
+
+class PlusCard(BoonToken):
+	name = 'PlusCard'
+	def boon(self, player, **kwargs):
+		player.draw()
+		
 class CoinOfTheRealm(Treasure, Reserve, CardAdd):
 	name = 'Coin of the Realm'
 	def __init__(self, game, **kwargs):
@@ -1566,4 +1586,151 @@ class Champion(Action, Duration, CardAdd):
 	def onPileCreate(self, pile, game, **kwargs):
 		for i in range(5): pile.append(type(self)(game))
 		
-adventures = [CoinOfTheRealm, Page]
+class Peasant(Action, Traveler, CardAdd):
+	name = 'Peasant'
+	def __init__(self, game, **kwargs):
+		super(Peasant, self).__init__(game, **kwargs)
+		Traveler.__init__(self, game, **kwargs)
+		self.morph = Soldier 
+		self.price = 2
+	def onPlay(self, player, **kwargs):
+		super(Peasant).onPlay(player, **kwargs)
+		Traveler.onPlay(self, player, **kwargs)
+		player.addCoin()
+		player.addBuy()
+
+class Soldier(Action, Traveler, Attack, CardAdd):
+	name = 'Soldier'
+	def __init__(self, game, **kwargs):
+		super(Soldier, self).__init__(game, **kwargs)
+		Traveler.__init__(self, game, **kwargs)
+		Attack.__init__(self, game, **kwargs)
+		self.morph = Figitive 
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Soldier, self).onPlay(player, **kwargs)
+		Traveler.onPlay(self, player, **kwargs)
+		player.addCoin(amnt=2)
+		attacks = 0
+		for card in player.inPlay:
+			if 'ATTACK' in card.types and card==self: attacks += 1
+		player.addCoin(amnt=attacks)
+		for aplayer in player.game.getPlayers(player):
+			if aplayer==player: continue
+			aplayer.attack(self.attack, self)
+	def attack(self, player, **kwargs):
+		if len(player.hand)>3: player.discard(player.user([o.name for o in player.hand], 'Choose discard'))
+	def onPileCreate(self, pile, game, **kwargs):
+		game.require(self.morph)
+		for i in range(5): pile.append(type(self)(game))
+		
+class Fugitive(Action, Traveler, CardAdd):
+	name = 'Fugitive'
+	def __init__(self, game, **kwargs):
+		super(Fugitive, self).__init__(game, **kwargs)
+		Traveler.__init__(self, game, **kwargs)
+		self.morph = Disciple 
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(Fugitive, self).onPlay(player, **kwargs)
+		Traveler.onPlay(self, player, **kwargs)
+		player.draw(amnt=2)
+		player.addAction()
+		if player.hand: player.discard(player.user([o.name for o in player.hand], 'Choose discard'))
+	def onPileCreate(self, pile, game, **kwargs):
+		game.require(self.morph)
+		for i in range(5): pile.append(type(self)(game))
+		
+class Disciple(Action, Traveler, CardAdd):
+	name = 'Disciple'
+	def __init__(self, game, **kwargs):
+		super(Disciple, self).__init__(game, **kwargs)
+		Traveler.__init__(self, game, **kwargs)
+		self.morph = Teacher 
+		self.price = 5
+	def onPlay(self, player, **kwargs):
+		super(Disciple, self).onPlay(player, **kwargs)
+		Traveler.onPlay(self, player, **kwargs)
+		self.links = []
+		options = []
+		for card in player.hand:
+			if 'ACTION' in card.types:
+				options.append(card)
+		if not options: return
+		choice = player.user([o.name for o in options]+'Play no action', 'Choose action')
+		if choice+1>len(options): return
+		for i in range(len(player.hand)):
+			if player.hand[i]==options[choice]:
+				player.inPlay.append(player.hand.pop(i))
+				break
+		self.links.append(options[choice])
+		player.game.dp.connect(self.trigger, signal='destroy')
+		for i in range(2): player.playAction(options[choice])
+		if options[choice].name in list(player.game.piles): player.gainFromPile(player.game.piles[options[choice].name])
+	def onDestroy(self, player, **kwargs):
+		if self.links: return True
+	def onLeavePlay(self, player, **kwargs):
+		player.game.dp.disconnect(self.trigger, signal='destroy')
+	def trigger(self, signal, **kwargs):
+		for i in range(len(self.links)-1, -1, -1):
+			if self.links[i]==kwargs['card']: self.links.pop(i)
+		if self.links: return
+		for i in range(len(self.owner.inPlay)):
+			if self.owner.inPlay[i]==self:
+				self.owner.destroyCard(self.owner.inPlay.pop(i))
+				break
+	def onPileCreate(self, pile, game, **kwargs):
+		game.require(self.morph)
+		for i in range(5): pile.append(type(self)(game))
+
+class Teacher(Action, Reserve, CardAdd):
+	name = 'Teacher'
+	def __init__(self, game, **kwargs):
+		super(Teacher).__init__(game, **kwargs)
+		Reserve.__init__(self, game, **kwargs)
+		self.triggerSignal = 'startTurn'
+		self.price = 6
+	def onPlay(self, player, **kwargs):
+		super(Teacher, self).onPlay(player, **kwargs)
+		Reserve.onPlay(self, player, **kwargs)
+	def call(self, signal, **kwargs):
+		pass	
+
+class Ratcatcher(Action, Reserve, CardAdd):
+	name = 'Ratcatcher'
+	def __init__(self, game, **kwargs):
+		super(Ratcatcher, self).__init__(game, **kwargs)
+		Reserve.__init__(self, game, **kwargs)
+		self.triggerSignal = 'startTurn'
+		self.price = 2
+	def onPlay(self, player, **kwargs):
+		super(Ratcatcher, self).onPlay(player, **kwargs)
+		Reserve.onPlay(self, player, **kwargs)
+		player.addAction()
+		player.draw()
+	def call(self, signal, **kwargs):
+		if not self.owner.hand: return
+		self.owner.trash(self.owner.user([o.name for o in self.owner.hand], 'Choose trash'))
+		
+class Raze(Action, CardAdd):
+	name = 'Raze'
+	def __init__(self, game, **kwargs):
+		super(Raze, self).__init__(game, **kwargs)
+		self.price = 2
+	def onPlay(self, player, **kwargs):
+		super(Raze, self).onPlay(player, **kwargs)
+		choice = player.user([o.name for o in player.hand]+['Raze itself'], 'Choose action')
+		if choice+1>len(player.hand):
+			trashedPrice = self.getPrice(player)
+			for i in range(len(player.inPlay)):
+				if player.inPlay[i]==self: player.trashCard(player.inPlay.pop(i))
+		else:
+			trashedPrice = player.hand[choice].getPrice(player)
+			player.trash(choice)
+		if not trashedPrice: return
+		cards = player.getCards(trashedPrice)
+		if not cards: return
+		player.hand.append(cards.pop(player.user([o.name for o in cards], 'Choose card')))
+		while cards: player.discardCard(cards.pop())
+			
+adventures = [CoinOfTheRealm, Page, Ratcatcher, Raze]

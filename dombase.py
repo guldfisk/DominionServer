@@ -377,6 +377,11 @@ class Token(object):
 	def __init__(self, game, **kwargs):
 		self.owner = kwargs.get('owner', None)
 		self.game = game
+		self.types = []
+	def onAddPile(self, pile, **kwargs):
+		pass
+	def onLeavePile(self, pile, **kwargs):
+		pass
 	
 class Pile(CPile):
 	def __init__(self, cardType, game, *args, **kwargs):
@@ -401,9 +406,11 @@ class Pile(CPile):
 	def addToken(self, token, game, **kwargs):
 		game.dp.send(signal='addToken', pile=self, token=token)
 		token.owner = self
+		token.onAddPile(self)
 		self.tokens.append(token)
 	def removeToken(self, token, game, **kwargs):
 		game.dp.send(signal='removeToken', pile=self, token=token)
+		token.onLeavePile(self)
 		token.owner = None
 		
 class CardAdd(object):
@@ -520,13 +527,14 @@ class Reserve(CardAdd):
 		self.types.append('RESERVE')
 		self.triggerSignal = ''
 	def onPlay(self, player, **kwargs):
+		player.addAction()
 		for i in range(len(player.inPlay)):
 			if player.inPlay[i]==self:
 				player.mats['Tavern'].append(player.inPlay.pop(i))
 				break
 		player.game.dp.connect(self.trigger, signal=self.triggerSignal)
 	def trigger(self, signal, **kwargs):
-		if not self.owner.user(('no', 'yes'), 'Call '+self.name): return
+		if not (self.owner==kwargs['player'] and self.owner.user(('no', 'yes'), 'Call '+self.name)): return
 		for i in range(len(self.owner.mats['Tavern'])):
 			if self.owner.mats['Tavern'][i]==self:
 				self.owner.inPlay.append(self.owner.mats['Tavern'].pop(i))
