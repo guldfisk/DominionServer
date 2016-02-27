@@ -5,8 +5,7 @@ import pickle
 import threading
 import struct
 import socket
-import tdominion
-	
+
 class traa(threading.Thread):
 	def __init__(self, f, **kwargs):
 		threading.Thread.__init__(self)
