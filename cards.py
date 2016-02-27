@@ -124,12 +124,16 @@ class Moat(Action, Reaction, CardAdd):
 		if kwargs['player']==self.owner and self in self.owner.hand and self.owner.user(('no', 'yes'), 'Use moat'):
 			self.owner.reveal(self)
 			return True
+	def connect(self, **kwargs):
+		kwargs['player'].game.dp.connect(self.trigger, signal=self.signal)
+	def disconnect(self, **kwargs):
+		kwargs['player'].game.dp.connect(self.trigger, signal=self.signal)
 	def onGain(self, player, **kwargs):
-		self.connect()
+		self.connect(**kwargs)
 	def onTrash(self, player, **kwargs):
-		self.disconnect()
+		self.disconnect(**kwargs)
 	def onReturn(self, player, **kwargs):
-		self.disconnect()
+		self.disconnect(**kwargs)
 		
 class Chancellor(Action, CardAdd):
 	name = 'Chancellor'
@@ -1034,10 +1038,10 @@ class Haven(Action, Duration, CardAdd):
 		player.draw()
 		player.addAction()
 		self.age = 0
-		player.game.dp.connect(self.trigger, signal='startTurn')
+		player.game.dp.connect(self.nextage, signal='startTurn')
 		if not player.hand: return
 		self.saved.append(player.hand.pop(player.user([o.name for o in player.hand], 'Choose saved')))
-	def trigger(self, signal, **kwargs):
+	def nextage(self, signal, **kwargs):
 		if kwargs['player']==self.owner:
 			self.age+=1
 			while self.saved: self.owner.hand.append(self.saved.pop())
@@ -1055,8 +1059,8 @@ class Lighthouse(Action, Duration, CardAdd):
 		player.addAction()
 		player.addCoin()
 		self.age = 0
-		player.game.dp.connect(self.trigger)
-	def trigger(self, signal, **kwargs):
+		player.game.dp.connect(self.nextage)
+	def nextage(self, signal, **kwargs):
 		if signal=='startTurn' and kwargs['player']==self.owner:
 			self.age+=1
 			self.owner.addCoin()
@@ -1422,18 +1426,15 @@ class Outpost(Action, Duration, CardAdd):
 		self.price = 5
 	def onPlay(self, player, **kwargs):
 		super(Outpost, self).onPlay(player, **kwargs)
-		print('PLAYING OUTPOST')
 		player.eotdraw = 3
 		print(player.eotdraw)
 		player.game.delayedActions.append((self.outpostTurn, {'player': player}))
 	def outpostTurn(self, **kwargs):
-		print('OUTPOST TURN')
 		turns = 0
 		for i in range(len(kwargs['player'].game.events)-1, -1, -1):
 			if kwargs['player'].game.events[0]=='startTurn':
 				if kwargs['player'].game.event[1]['player']==self: turns+=1
 				else: break
-		print(turns)
 		if turns>1: return
 		kwargs['player'].game.activePlayer = self
 		kwargs['player'].game.turnFlag = 'outpost'
@@ -1444,7 +1445,7 @@ class Outpost(Action, Duration, CardAdd):
 		kwargs['player'].buyPhase()
 		kwargs['player'].endTurn()
 			
-seaside = [Embargo, Haven, Lighthouse, NativeVillage, FishingVillage, Lookout, Smugglers, Caravan, Cutpurse, Island, Navigator, PirateShip, Salvager, SeaHag, TreasureMap, Bazaar, Explorer, GhostShip, MerchantShip, Outpost, Tactician, Treasury]
+seaside = [Embargo, Haven, Lighthouse, NativeVillage, Ambassador, FishingVillage, Lookout, Smugglers, Caravan, Cutpurse, Island, Navigator, PirateShip, Salvager, SeaHag, TreasureMap, Bazaar, Explorer, GhostShip, MerchantShip, Outpost, Tactician, Treasury]
 
 class BoonToken(Token):
 	name = 'Base Boon Token'
@@ -1692,7 +1693,6 @@ class Teacher(Action, Reserve, CardAdd):
 		self.price = 6
 	def onPlay(self, player, **kwargs):
 		super(Teacher, self).onPlay(player, **kwargs)
-		Reserve.onPlay(self, player, **kwargs)
 	def call(self, signal, **kwargs):
 		pass	
 
@@ -1700,7 +1700,6 @@ class Ratcatcher(Action, Reserve, CardAdd):
 	name = 'Ratcatcher'
 	def __init__(self, game, **kwargs):
 		super(Ratcatcher, self).__init__(game, **kwargs)
-		Reserve.__init__(self, game, **kwargs)
 		self.triggerSignal = 'startTurn'
 		self.price = 2
 	def onPlay(self, player, **kwargs):
@@ -1734,4 +1733,133 @@ class Raze(Action, CardAdd):
 		player.hand.append(cards.pop(player.user([o.name for o in cards], 'Choose card')))
 		while cards: player.discardCard(cards.pop())
 			
-adventures = [CoinOfTheRealm, Page, Ratcatcher, Raze]
+class Amulet(Action, Duration, CardAdd):
+	name = 'Amulet'
+	def __init__(self, game, **kwargs):
+		super(Amulet, self).__init__(game, **kwargs)
+		Duration.__init__(self, game, **kwargs)
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Amulet, self).onPlay(player, **kwargs)
+		self.next()
+	def next(self, **kwargs):
+		choice = self.owner.user(('+1 coin', 'Trash card', 'Gain silver'), 'Choose one')
+		if choice==0: self.owner.addCoin()
+		elif choice==1:
+			if not self.owner.hand: return
+			self.owner.trash(self.owner.user([o.name for o in self.owner.hand], 'Choose trash'))
+		elif choice==2: self.owner.gainFromPile(self.owner.game.piles['Silver'])
+			
+class CaravanGuard(Action, Duration, Reaction, CardAdd):
+	name = 'Caravan Guard'
+	def __init__(self, game, **kwargs):
+		super(CaravanGuard, self).__init__(game, **kwargs)
+		Duration.__init__(self, game, **kwargs)
+		Reaction.__init__(self, game, **kwargs)
+		self.price = 3
+		self.signal = 'Attack'
+	def onPlay(self, player, **kwargs):
+		super(CaravanGuard, self).onPlay(player, **kwargs)
+		player.draw()
+		player.addAction()
+	def next(self, **kwargs):
+		self.owner.addCoin()
+	def trigger(self, signal, **kwargs):
+		if kwargs['player']==self.owner and self in self.owner.hand and self.owner.user(('no', 'yes'), 'Use Caravan Guard'):
+			for i in range(len(self.owner.hand)):
+				if self==self.owner.hand[i]:
+					self.owner.inPlay.append(self.owner,hand.pop(i))
+					self.owner.playAction(self)
+					break
+	def connect(self, **kwargs):
+		kwargs['player'].game.dp.connect(self.trigger, signal=self.signal)
+	def disconnect(self, **kwargs):
+		kwargs['player'].game.dp.connect(self.trigger, signal=self.signal)
+	def onGain(self, player, **kwargs):
+		self.connect(player=player)
+	def onTrash(self, player, **kwargs):
+		self.disconnect(player=player)
+	def onReturn(self, player, **kwargs):
+		self.disconnect(player=player)
+
+class Dungeon(Action, Duration, CardAdd):
+	name = 'Dungeon'
+	def __init__(self, game, **kwargs):
+		super(Dungeon, self).__init__(game, **kwargs)
+		Duration.__init__(self, game, **kwargs)
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Dungeon, self).onPlay(player, **kwargs)
+		player.addAction()
+		self.next()
+	def next(self, **kwargs):
+		self.owner.draw(amnt=2)
+		for i in range(2):
+			if not self.owner.hand: break
+			self.owner.discard(self.owner.user([o.name for o in self.owner.hand], 'Choose discard '+str(i+1)))
+
+class Gear(Action, Duration, CardAdd):
+	name = 'Gear'
+	def __init__(self, game, **kwargs):
+		super(Gear, self).__init__(game, **kwargs)
+		Duration.__init__(self, game, **kwargs)
+		self.price = 3
+		self.saved = []
+	def onPlay(self, player, **kwargs):
+		super(Gear, self).onPlay(player, **kwargs)
+		player.draw(amnt=2)
+		self.age = 0
+		player.game.dp.connect(self.trigger, signal='startTurn')
+		for i in range(2):
+			if not player.hand: return
+			self.saved.append(player.hand.pop(player.user([o.name for o in player.hand], 'Choose saved '+str(i+1))))
+	def nextage(self, signal, **kwargs):
+		if kwargs['player']==self.owner:
+			self.age+=1
+			while self.saved: self.owner.hand.append(self.saved.pop())
+	def onGameEnd(self, player, **kwargs):
+		while self.saved: player.library.append(self.saved.pop())
+			
+class Guide(Action, Reserve, CardAdd):
+	name = 'Guide'
+	def __init__(self, game, **kwargs):
+		super(Guide, self).__init__(game, **kwargs)
+		Reserve.__init__(self, game, **kwargs)
+		self.triggerSignal = 'startTurn'
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Guide, self).onPlay(player, **kwargs)
+		player.addAction()
+		player.draw()
+	def call(self, signal, **kwargs):
+		while self.owner.hand: self.owner.discardCard(self.owner.hand.pop())
+		self.owner.draw(amnt=5)
+			
+class Duplicate(Action, Reserve, CardAdd):
+	name = 'Duplicate'
+	def __init__(self, game, **kwargs):
+		super(Duplicate, self).__init__(game, **kwargs)
+		self.triggerSignal = 'gain'
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(Duplicate, self).onPlay(player, **kwargs)
+		Reserve.onPlay(self, player, **kwargs)
+	def requirements(self, **kwargs):
+		return self.owner==kwargs['player'] and kwargs['card'].getPrice(self.owner)<7 and kwargs['card'].name in list(self.owner.game.piles)
+	def call(self, signal, **kwargs):
+		self.owner.gainFromPile(self.owner.game.piles[kwargs['card'].name])
+			
+class Magpie(Action, CardAdd):
+	name = 'Magpie'
+	def __init__(self, game, **kwargs):
+		super(Magpie, self).__init__(game, **kwargs)
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(Magpie, self).onPlay(player, **kwargs)
+		player.draw()
+		player.addAction()
+		revealedCard = player.revealPosition(-1, fromZ=player.library)
+		if 'TREASURE' in revealedCard.types: player.draw()
+		if 'ACTION' in revealedCard.types or 'VICTORY' in revealedCard.types: player.gainFromPile(player.game.piles['Magpie'])
+			
+adventures = [CoinOfTheRealm, Page, Ratcatcher, Raze, Amulet, CaravanGuard, Dungeon, Gear, Guide, Duplicate, Magpie]

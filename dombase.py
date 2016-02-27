@@ -509,16 +509,18 @@ class Duration(object):
 		self.nexts = []
 	def onPlay(self, player, **kwargs):
 		self.nexts.append(self.next)
-		player.game.dp.connect(self.trigger, signal='startTurn')
+		player.game.dp.connect(self.nextage, signal='startTurn')
 		self.age = 0
 	def onDestroy(self, player, **kwargs):
 		if self.age<1: return True
 	def onLeavePlay(self, player, **kwargs):
-		player.game.dp.disconnect(self.trigger, signal='startTurn')
-	def trigger(self, signal, **kwargs):
+		player.game.dp.disconnect(self.nextage, signal='startTurn')
+	def nextage(self, signal, **kwargs):
 		if not kwargs['player']==self.owner: return
 		self.age+=1
-		while self.nexts: self.nexts.pop()()
+		while self.nexts:
+			self.owner.game.dp.send(signal='duration', card=self)
+			self.nexts.pop()()
 	def next(self, **kwargs):
 		pass
 	
@@ -527,14 +529,15 @@ class Reserve(CardAdd):
 		self.types.append('RESERVE')
 		self.triggerSignal = ''
 	def onPlay(self, player, **kwargs):
-		player.addAction()
 		for i in range(len(player.inPlay)):
 			if player.inPlay[i]==self:
 				player.mats['Tavern'].append(player.inPlay.pop(i))
 				break
 		player.game.dp.connect(self.trigger, signal=self.triggerSignal)
+	def requirements(self, **kwargs):
+		return self.owner==kwargs['player']
 	def trigger(self, signal, **kwargs):
-		if not (self.owner==kwargs['player'] and self.owner.user(('no', 'yes'), 'Call '+self.name)): return
+		if not (self.requirements(**kwargs) and self.owner.user(('no', 'yes'), 'Call '+self.name)): return
 		for i in range(len(self.owner.mats['Tavern'])):
 			if self.owner.mats['Tavern'][i]==self:
 				self.owner.inPlay.append(self.owner.mats['Tavern'].pop(i))
