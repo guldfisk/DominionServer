@@ -610,10 +610,10 @@ class Quarry(Treasure, CardAdd):
 		self.value = 1
 	def onPlay(self, player, **kwargs):
 		super(Quarry, self).onPlay(player, **kwargs)
-		for card in allCards:
+		for card in player.game.allCards:
 			if 'ACTION' in card.types: card.price-=2
 	def onLeavePlay(self, player, **kwargs):
-		for card in allCards:
+		for card in player.game.allCards:
 			if 'ACTION' in card.types: card.price+=2
 			
 class Talisman(Treasure, CardAdd):
@@ -630,9 +630,9 @@ class Talisman(Treasure, CardAdd):
 	def trigger(self, signal, **kwargs):
 		if kwargs['player']==self.owner and 'pile' in kwargs and kwargs['pile'].viewTop() and not 'VICTORY' in kwargs['pile'].viewTop().types: self.owner.gainFromPile(kwargs['pile'])
 	def connect(self, **kwargs):
-		player.game.dp.connect(self.trigger, signal='buy')
+		self.owner.game.dp.connect(self.trigger, signal='buy')
 	def disconnect(self, **kwargs):
-		player.game.dp.connect(self.trigger, signal='buy')
+		self.owner.game.dp.connect(self.trigger, signal='buy')
 	
 class WorkersVillage(Action, CardAdd):
 	name = "Worker's Village"
@@ -1719,6 +1719,7 @@ class Raze(Action, CardAdd):
 		self.price = 2
 	def onPlay(self, player, **kwargs):
 		super(Raze, self).onPlay(player, **kwargs)
+		player.addAction()
 		choice = player.user([o.name for o in player.hand]+['Raze itself'], 'Choose action')
 		if choice+1>len(player.hand):
 			trashedPrice = self.getPrice(player)
