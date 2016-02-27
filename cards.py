@@ -144,6 +144,7 @@ class Chancellor(Action, CardAdd):
 		super(Chancellor, self).onPlay(player, **kwargs)
 		player.addCoin(amnt=2)
 		if player.user(('no', 'yes'), 'Discard library'):
+			player.game.dp.send(signal='Announce', message='Discard deck')
 			while player.library:
 				player.discardPile.append(player.library.pop())
 		
@@ -856,11 +857,11 @@ class Hoard(Treasure, CardAdd):
 	def onLeavePlay(self, player, **kwargs):
 		self.disconnect()
 	def trigger(self, signal, **kwargs):
-		if kwargs['player']==self.owner and 'pile' in kwargs and kwargs['pile'].viewTop() and 'VICTORY' in kwargs['pile'].viewTop().types: self.owner.gainFromPile(player.game.piles['Gold'])
+		if kwargs['player']==self.owner and 'pile' in kwargs and kwargs['pile'].viewTop() and 'VICTORY' in kwargs['pile'].viewTop().types: self.owner.gainFromPile(self.owner.game.piles['Gold'])
 	def connect(self, **kwargs):
-		player.game.dp.connect(self.trigger, signal='buy')
+		self.owner.game.dp.connect(self.trigger, signal='buy')
 	def disconnect(self, **kwargs):
-		player.game.dp.connect(self.trigger, signal='buy')
+		self.owner.game.dp.connect(self.trigger, signal='buy')
 
 class Bank(Treasure, CardAdd):
 	name = 'Bank'
@@ -962,10 +963,10 @@ class Peddler(Action, CardAdd):
 		player.draw()
 	def getPrice(self, player, **kwargs):
 		isBuy = False
-		for i in range(len(events)-1, -1, -1):
-			if events[i][0]=='actionPhase' or events[i][0]=='treasurePhase': break
-			elif events[i][0]=='buyPhase':
-				isBuy = events[i][1]['player']==player
+		for i in range(len(player.game.events)-1, -1, -1):
+			if player.game.events[i][0]=='actionPhase' or player.game.events[i][0]=='treasurePhase': break
+			elif player.game.events[i][0]=='buyPhase':
+				isBuy = player.game.events[i][1]['player']==player
 				break
 		if not isBuy: return np.max((self.price, 0))
 		actions = 0
@@ -1861,5 +1862,31 @@ class Magpie(Action, CardAdd):
 		revealedCard = player.revealPosition(-1, fromZ=player.library)
 		if 'TREASURE' in revealedCard.types: player.draw()
 		if 'ACTION' in revealedCard.types or 'VICTORY' in revealedCard.types: player.gainFromPile(player.game.piles['Magpie'])
-			
-adventures = [CoinOfTheRealm, Page, Ratcatcher, Raze, Amulet, CaravanGuard, Dungeon, Gear, Guide, Duplicate, Magpie]
+
+class Messenger(Action, CardAdd):
+	name = 'Messenger'
+	def __init__(self, game, **kwargs):
+		super(Messenger, self).__init__(game, **kwargs)
+		self.price = 4
+		game.dp.connect(self.trigger, signal='buy')
+	def onPlay(self, player, **kwargs):
+		super(Messenger, self).onPlay(player, **kwargs)
+		player.addCoin(amnt=2)
+		player.addBuy()
+		if player.user(('no', 'yes'), 'Discard library'):
+			player.game.dp.send(signal='Announce', message='Discard deck')
+			while player.library:
+				player.discardPile.append(player.library.pop())
+	def trigger(self, signal, **kwargs):
+		if not self==kwargs['card']: return
+		for i in range(len(kwargs['player'].game.events)-1, -1, -1):
+			if kwargs['player'].game.events[i][0]=='buy' and kwargs['player'].game.events[i][1]['card']!=self: return
+			elif kwargs['player'].game.events[i][0]=='startTurn': break
+		options = []
+		for pile in kwargs['player'].game.piles:
+			if kwargs['player'].game.piles[pile].viewTop() and kwargs['player'].game.piles[pile].viewTop().getPrice(kwargs['player'])<5 and kwargs['player'].game.piles[pile].viewTop().getPotionPrice(kwargs['player'])<1: options.append(pile)
+		if not options: return
+		choice = kwargs['player'].user(options, 'Choose gain')
+		for player in kwargs['player'].game.getPlayer(kwargs['player']): player.gainFromPile(kwargs['player'].game.piles[options[choice]])
+		
+adventures = [CoinOfTheRealm, Page, Ratcatcher, Raze, Amulet, CaravanGuard, Dungeon, Gear, Guide, Duplicate, Magpie, Messenger]
