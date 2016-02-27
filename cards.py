@@ -465,8 +465,8 @@ class Mine(Action, CardAdd):
 			if 'TREASURE' in player.game.piles[pile].viewTop().types and player.game.piles[pile].viewTop().getPrice(player)<=coinVal+3 and player.game.piles[pile].viewTop().getPotionPrice(player)<=potionVal:
 				options.append(player.game.piles[pile])
 		if not options: return
-		choice = player.user((o.name for o in options), 'Choose gain')
-		player.gainFromplayer.game.piles(player.game.piles[options[choice]])
+		choice = player.user([o.name for o in options], 'Choose gain')
+		player.gainFromPile(options[choice])
 	
 class Witch(Action, Attack, CardAdd):
 	name = 'Witch'
