@@ -331,9 +331,9 @@ class Player(object):
 		self.discardPile.append(card)
 		card.owner = self
 	def take(self, card, **kwargs):
-		self.game.dp.send(signal='take', player=self, pile=pile)
-		cardGained.owner = self
-		cardGained.onGain(self)
+		self.game.dp.send(signal='take', player=self, card=card, fromz=kwargs.get('fromz', None))
+		card.owner = self
+		card.onGain(self)
 		kwargs.get('to', self.discardPile).append(card)
 	def gain(self, card, **kwargs):
 		if card and not card.onGain(self) and not self.game.dp.send(signal='gain', player=self, card=card, fromz=kwargs.get('fromz', None), kwargs=kwargs):
