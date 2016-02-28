@@ -158,6 +158,10 @@ class Player(object):
 		self.channelOut = None
 		self.game = None
 		self.eotdraw = 5
+		self.journey = True
+	def flipJourney(self):
+		self.journey = not self.journey
+		return self.journey
 	def request(self, head):
 		print('HEAD', head)
 		if head=='stat': return 'Actions: '+str(self.actions)+'\tCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)

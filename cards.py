@@ -1889,5 +1889,54 @@ class Messenger(Action, CardAdd):
 		if not options: return
 		choice = kwargs['player'].user(options, 'Choose gain')
 		for player in kwargs['player'].game.getPlayer(kwargs['player']): player.gainFromPile(kwargs['player'].game.piles[options[choice]])
+
+class Miser(Action, CardAdd):
+	name = 'Miser'
+	def __init__(self, game, **kwargs):
+		super(Miser, self).__init__(game, **kwargs)
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(Miser, self).onPlay(player, **kwargs)
+		if player.user(('Coins', 'Hidde Copper'), 'Choose mode'):
+			for i in range(len(player.hand)):
+				if player.hand[i].name=='Copper':
+					player.mats['Tavern'].append(player.hand.pop(i))
+					break
+		else:
+			coppers = 0
+			for card in player.mats['Tavern']:
+				if card.name=='Copper': coppers += 1
+			player.addCoin(amnt=coppers)
+	def onPileCreate(self, pile, game, **kwargs):
+		super(Miser, self).onPileCreate(pile, game, **kwargs)
+		game.addMat('Tavern')
+	
+class Port(Action, CardAdd):
+	name = 'Port'
+	def __init__(self, game, **kwargs):
+		super(Port, self).__init__(game, **kwargs)
+		self.price = 4
+		game.dp.connect(self.trigger, signal='buy')
+	def onPlay(self, player, **kwargs):
+		super(Port, self).onPlay(player, **kwargs)
+		player.addAction(amnt=2)
+		player.draw()
+	def trigger(self, signal, **kwargs):
+		if 'pile' in kwargs and not self==kwargs['pile'].viewTop(): return
+		kwargs['player'].gainFromPile(kwargs['player'].game.piles['Port'])
+	def onPileCreate(self, pile, game, **kwargs):
+		for i in range(12):
+			pile.append(type(self)(game))
+
+class Ranger(Action, CardAdd):
+	name = 'Ranger'
+	def __init__(self, game, **kwargs):
+		super(Ranger, self).__init__(game, **kwargs)
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(Ranger, self).onPlay(player, **kwargs)
+		player.addBuy()
+		if player.flipJourney(): player.draw(amnt=5)
+
 		
-adventures = [CoinOfTheRealm, Page, Ratcatcher, Raze, Amulet, CaravanGuard, Dungeon, Gear, Guide, Duplicate, Magpie, Messenger]
+adventures = [CoinOfTheRealm, Page, Ratcatcher, Raze, Amulet, CaravanGuard, Dungeon, Gear, Guide, Duplicate, Magpie, Messenger, Miser, Port, Ranger]
