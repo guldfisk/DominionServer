@@ -1812,7 +1812,7 @@ class Gear(Action, Duration, CardAdd):
 		super(Gear, self).onPlay(player, **kwargs)
 		player.draw(amnt=2)
 		self.age = 0
-		player.game.dp.connect(self.trigger, signal='startTurn')
+		player.game.dp.connect(self.next, signal='startTurn')
 		for i in range(2):
 			if not player.hand: return
 			self.saved.append(player.hand.pop(player.user([o.name for o in player.hand], 'Choose saved '+str(i+1))))
