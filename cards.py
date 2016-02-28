@@ -129,11 +129,11 @@ class Moat(Action, Reaction, CardAdd):
 	def disconnect(self, **kwargs):
 		kwargs['player'].game.dp.connect(self.trigger, signal=self.signal)
 	def onGain(self, player, **kwargs):
-		self.connect(**kwargs)
+		self.connect(player=player)
 	def onTrash(self, player, **kwargs):
-		self.disconnect(**kwargs)
+		self.disconnect(player=player)
 	def onReturn(self, player, **kwargs):
-		self.disconnect(**kwargs)
+		self.disconnect(player=player)
 		
 class Chancellor(Action, CardAdd):
 	name = 'Chancellor'
@@ -1480,6 +1480,7 @@ class CoinOfTheRealm(Treasure, Reserve, CardAdd):
 		super(CoinOfTheRealm, self).onPlay(player, **kwargs)
 		Reserve.onPlay(self, player, **kwargs)
 	def call(self, signal, **kwargs):
+		super(CoinOfTheRealm, self).call(signal, **kwargs)
 		self.owner.addAction(amnt=2)
 		
 class Page(Action, Traveler, CardAdd):
@@ -1694,7 +1695,7 @@ class Teacher(Action, Reserve, CardAdd):
 	def onPlay(self, player, **kwargs):
 		super(Teacher, self).onPlay(player, **kwargs)
 	def call(self, signal, **kwargs):
-		pass	
+		super(Teacher, self).call(signal, **kwargs)
 
 class Ratcatcher(Action, Reserve, CardAdd):
 	name = 'Ratcatcher'
@@ -1709,6 +1710,7 @@ class Ratcatcher(Action, Reserve, CardAdd):
 		player.draw()
 	def call(self, signal, **kwargs):
 		if not self.owner.hand: return
+		super(Ratcatcher, self).call(signal, **kwargs)
 		self.owner.trash(self.owner.user([o.name for o in self.owner.hand], 'Choose trash'))
 		
 class Raze(Action, CardAdd):
@@ -1832,6 +1834,7 @@ class Guide(Action, Reserve, CardAdd):
 		player.addAction()
 		player.draw()
 	def call(self, signal, **kwargs):
+		super(Guide, self).call(signal, **kwargs)
 		while self.owner.hand: self.owner.discardCard(self.owner.hand.pop())
 		self.owner.draw(amnt=5)
 			
@@ -1847,6 +1850,7 @@ class Duplicate(Action, Reserve, CardAdd):
 	def requirements(self, **kwargs):
 		return self.owner==kwargs['player'] and kwargs['card'].getPrice(self.owner)<7 and kwargs['card'].name in list(self.owner.game.piles)
 	def call(self, signal, **kwargs):
+		super(Duplicate, self).call(signal, **kwargs)
 		self.owner.gainFromPile(self.owner.game.piles[kwargs['card'].name])
 			
 class Magpie(Action, CardAdd):

@@ -549,6 +549,7 @@ class Reserve(CardAdd):
 		self.owner.game.dp.disconnect(self.trigger, signal=self.triggerSignal)
 		self.call(signal, **kwargs)
 	def call(self, signal, **kwargs):
+		self.owner.game.dp.send(signal='call', card=self)
 		pass
 	def onPileCreate(self, pile, game, **kwargs):
 		super(Reserve, self).onPileCreate(pile, game, **kwargs)
