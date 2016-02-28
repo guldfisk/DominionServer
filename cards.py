@@ -544,6 +544,7 @@ class TradeRoute(Action, CardAdd):
 		self.price = 3
 	def onPlay(self, player, **kwargs):
 		super(TradeRoute, self).onPlay(player, **kwargs)
+		player.addBuy()
 		player.addCoin(amnt=len(player.game.globalMats['TradeRouteMat']))
 		if player.hand: player.trash(player.user([o.name for o in player.hand], 'Choose trash'))
 	def addTokens(self, **kwargs):
@@ -1165,11 +1166,11 @@ class Smugglers(Action, CardAdd):
 		super(Smugglers, self).onPlay(player, **kwargs)
 		previousPlayer = player.game.getPreviousPlayer(player)
 		options = []
-		for i in range(len(events)-1, -1, -1):
-			if events[i][0]=='startTurn' and events[i][1]['player']==previousPlayer:
-				for n in range(i, len(events)):
-					if events[n][0]=='gain' and events[n][1]['player']==previousPlayer and events[n][1]['card'].getPrice(player)<7: options.append(events[n][1]['card'].name)
-					elif events[n][0]=='endTurn': break
+		for i in range(len(player.game.events)-1, -1, -1):
+			if player.game.events[i][0]=='startTurn' and player.game.events[i][1]['player']==previousPlayer:
+				for n in range(i, len(player.game.events)):
+					if player.game.events[n][0]=='gain' and player.game.events[n][1]['player']==previousPlayer and player.game.events[n][1]['card'].getPrice(player)<7: options.append(player.game.events[n][1]['card'].name)
+					elif player.game.events[n][0]=='endTurn': break
 				break
 		if not options: return
 		player.gainFromPile(player.game.piles[options[player.user(options, 'Choose smuggle')]])
@@ -1280,7 +1281,7 @@ class PirateShip(Action, Attack, CardAdd):
 			for i in range(len(cards)):
 				if cards[i]==options[choice]:
 					player.trashCard(cards.pop(i))
-					self.owner.mats['PirateMat'].append(PirateToken())
+					self.owner.mats['PirateMat'].append(PirateToken(player.game))
 					break
 		while cards: player.discardCard(cards.pop())
 		
