@@ -1412,13 +1412,11 @@ class Treasury(Action, CardAdd):
 		player.addCoin()
 		player.draw()
 	def onDestroy(self, player, **kwargs):
-		for i in range(len(events)-1, -1, -1):
-			if events[0]=='buy' and events[1]['card'] and 'VICTORY' in events[1]['card'].types: return
-			elif events[0]=='startTurn': break
-		if not player.user(('bot', 'top')): return
-		print(player.inPlay)
+		for i in range(len(player.game.events)-1, -1, -1):
+			if player.game.events[i][0]=='buy' and player.game.events[i][1]['card'] and 'VICTORY' in player.game.events[i][1]['card'].types: return
+			elif player.game.events[i][0]=='startTurn': break
+		if not player.user(('bot', 'top'), 'Treasury'): return
 		for i in range(len(player.inPlay)):
-			print(i, player.inPlay[i], self)
 			if player.inPlay[i]==self: player.library.append(player.inPlay.pop(i))
 			return True
 
