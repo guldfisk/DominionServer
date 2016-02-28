@@ -1575,7 +1575,6 @@ class Champion(Action, Duration, CardAdd):
 		Duration.__init__(self, game, **kwargs)
 		self.price = 6
 	def onPlay(self, player, **kwargs):
-		super(Champion, self).onPlay(player, **kwargs)
 		player.addAction()
 		player.game.dp.connect(self.defence, signal='attack')
 		player.game.dp.connect(self.addAction, signal='playAction')

@@ -138,6 +138,7 @@ class Game(object):
 		for player in self.players:
 			for i in range(7): player.gainFromPile(self.piles['Copper'])
 			for i in range(3): player.gainFromPile(self.piles['Estate'])
+			#player.gainFromPile(self.piles['Page'])
 			for card in player.discardPile: self.allCards.append(card)
 	
 class Player(object):
@@ -285,9 +286,12 @@ class Player(object):
 			card.owner = None
 			self.game.trash.append(card)
 	def returnCard(self, card, **kwargs):
-		if not card.name in self.game.piles: return
-		self.game.dp.send(signal='return', player=self, card=card)
-		self.game.piles[card.name].append(card)
+		if card.name in self.game.piles:
+			self.game.dp.send(signal='return', player=self, card=card)
+			self.game.piles[card.name].append(card)
+		elif card.name in self.game.NSPiles:
+			self.game.dp.send(signal='return', player=self, card=card)
+			self.game.NSPiles[card.name].append(card)
 	def discard(self, position = 0, **kwargs):
 		discardedCard = self.hand.pop(position)
 		self.discardCard(discardedCard, **kwargs)
