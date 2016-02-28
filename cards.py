@@ -359,20 +359,18 @@ class ThroneRoom(Action, CardAdd):
 			if 'ACTION' in card.types:
 				options.append(card)
 		if not options: return
-		print('\t', player.hand)
 		choice = player.user([o.name for o in options], 'Choose action')
 		for i in range(len(player.hand)):
 			if player.hand[i]==options[choice]:
 				player.inPlay.append(player.hand.pop(i))
 				break
-		print('\t', player.hand)
 		self.links.append(options[choice])
 		player.game.dp.connect(self.trigger, signal='destroy')
 		for i in range(2): player.playAction(options[choice])
 	def onDestroy(self, player, **kwargs):
 		if self.links: return True
 	def onLeavePlay(self, player, **kwargs):
-		player.game.dp.disconnect(self.trigger, signal='destroy')
+		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
 	def trigger(self, signal, **kwargs):
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
@@ -941,7 +939,7 @@ class KingsCourt(Action, CardAdd):
 	def onDestroy(self, player, **kwargs):
 		if self.links: return True
 	def onLeavePlay(self, player, **kwargs):
-		player.game.dp.disconnect(self.trigger, signal='destroy')
+		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
 	def trigger(self, signal, **kwargs):
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
@@ -1672,7 +1670,7 @@ class Disciple(Action, Traveler, CardAdd):
 	def onDestroy(self, player, **kwargs):
 		if self.links: return True
 	def onLeavePlay(self, player, **kwargs):
-		player.game.dp.disconnect(self.trigger, signal='destroy')
+		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
 	def trigger(self, signal, **kwargs):
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
