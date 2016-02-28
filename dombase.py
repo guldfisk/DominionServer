@@ -502,9 +502,13 @@ class Reaction(object):
 	def trigger(self, signal, **kwargs):
 		pass
 	def connect(self, **kwargs):
-		self.owner.game.dp.connect(self.trigger, signal=self.signal)
+		if 'game' in kwargs: game=kwargs['game']
+		else: game = self.owner.game
+		game.dp.connect(self.trigger, signal=self.signal)
 	def disconnect(self, **kwargs):
-		self.owner.game.dp.connect(self.trigger, signal=self.signal)
+		if 'game' in kwargs: game=kwargs['game']
+		else: game = self.owner.game
+		game.dp.connect(self.trigger, signal=self.signal)
 		
 class Attack(object):
 	def __init__(self, game, **kwargs):

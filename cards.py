@@ -567,14 +567,16 @@ class Watchtower(Action, Reaction, CardAdd):
 	def trigger(self, signal, **kwargs):
 		if kwargs['player']==self.owner and self in self.owner.hand and self.owner.user(('no', 'UseWatchTower'), ''):
 			self.owner.reveal(self)
-			if self.owner.user(('top', 'trash'), ''): kwargs['kwargs']['to'] = trash
+			if self.owner.user(('top', 'trash'), ''): 
+				self.owner.trashCard(kwargs['card'])
+				return True
 			else: kwargs['kwargs']['to'] = self.owner.library
 	def onGain(self, player, **kwargs):
-		self.connect()
+		self.connect(game=player.game)
 	def onTrash(self, player, **kwargs):
-		self.disconnect()
+		self.disconnect(game=player.game)
 	def onReturn(self, player, **kwargs):
-		self.disconnect()
+		self.disconnect(game=player.game)
 		
 class Bishop(Action, CardAdd):
 	name = 'Bishop'
