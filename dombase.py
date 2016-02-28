@@ -545,13 +545,14 @@ class Reserve(CardAdd):
 	def requirements(self, **kwargs):
 		return self.owner==kwargs['player']
 	def trigger(self, signal, **kwargs):
+		print(self.name, 'TRIGGERED')
 		if not (self.requirements(**kwargs) and self.owner.user(('no', 'yes'), 'Call '+self.name)): return
 		for i in range(len(self.owner.mats['Tavern'])):
 			if self.owner.mats['Tavern'][i]==self:
 				self.owner.inPlay.append(self.owner.mats['Tavern'].pop(i))
-				break
-		self.owner.game.dp.disconnect(self.trigger, signal=self.triggerSignal)
-		self.call(signal, **kwargs)
+				self.owner.game.dp.disconnect(self.trigger, signal=self.triggerSignal)
+				self.call(signal, **kwargs)
+				return
 	def call(self, signal, **kwargs):
 		self.owner.game.dp.send(signal='call', card=self)
 		pass

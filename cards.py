@@ -697,7 +697,9 @@ class CountingHouse(Action, CardAdd):
 			if card.name=='Copper': coppers+=1
 		for i in range(player.user(list(range(coppers+1)), 'Choose amnount')):
 			for n in range(len(player.discardPile)-1, -1, -1):
-				if player.discardPile[n].name=='Copper': player.hand.append(player.discardPile.pop(n))
+				if player.discardPile[n].name=='Copper':
+					player.revealCard(player.discardPile[n])
+					player.hand.append(player.discardPile.pop(n))
 		
 class Mint(Action, CardAdd):
 	name = 'Mint'

@@ -29,6 +29,7 @@ Internal attributes:
 """
 import weakref
 from pydispatch import saferef, robustapply, errors
+import copy
 
 class _Parameter:
 	"""Used to represent default parameter values."""
@@ -250,14 +251,16 @@ class Dispatcher(object):
 		and resolving them, then returning all live
 		receivers.
 		"""
+		retur = []
 		for receiver in receivers:
 			if isinstance( receiver, WEAKREF_TYPES):
 				# Dereference the weak reference.
 				receiver = receiver()
 				if receiver is not None:
-					yield receiver
+					retur.append(receiver)
 			else:
-				yield receiver
+				retur.append(receiver)
+		return retur
 	def getAllReceivers(self, sender = Any, signal = Any ):
 		"""Get list of all receivers from global tables
 
