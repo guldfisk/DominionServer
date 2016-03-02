@@ -1,8 +1,9 @@
 Prompt til at købe uden at havde buys
 socket recv error
 chancellor message
-reserve trigger ikke
 duration biver en tur for meget i spil
-tror ikke counting house revealer
 throne room + treasure map
 call coinof the realm inden / før action
+call og durationn resolve order
+miser stavning
+vault

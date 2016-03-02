@@ -860,11 +860,12 @@ class Hoard(Treasure, CardAdd):
 	def onLeavePlay(self, player, **kwargs):
 		self.disconnect()
 	def trigger(self, signal, **kwargs):
-		if kwargs['player']==self.owner and 'pile' in kwargs and kwargs['pile'].viewTop() and 'VICTORY' in kwargs['pile'].viewTop().types: self.owner.gainFromPile(self.owner.game.piles['Gold'])
+		if kwargs['player']==self.owner and 'pile' in kwargs and kwargs['pile'].viewTop() and 'VICTORY' in kwargs['pile'].viewTop().types:
+			self.owner.gainFromPile(self.owner.game.piles['Gold'])
 	def connect(self, **kwargs):
 		self.owner.game.dp.connect(self.trigger, signal='buy')
 	def disconnect(self, **kwargs):
-		self.owner.game.dp.connect(self.trigger, signal='buy')
+		self.owner.game.dp.disconnect(self.trigger, signal='buy')
 
 class Bank(Treasure, CardAdd):
 	name = 'Bank'
