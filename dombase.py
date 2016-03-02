@@ -167,7 +167,7 @@ class Player(object):
 		if head=='stat': return 'Actions: '+str(self.actions)+'\tCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)
 		elif head=='king':
 			ud = ''
-			for key in sorted(self.game.piles): ud+=key+': '+str(len(self.game.piles[key]))+', '
+			for key in sorted(self.game.piles): ud+=key+' '+str(self.game.piles[key].maskot.getPrice(self))+'$: '+str(len(self.game.piles[key]))+', '
 			return ud
 	def toPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
@@ -396,9 +396,10 @@ class Pile(CPile):
 		super(Pile, self).__init__(*args, **kwargs)
 		self.game = game
 		self.cardType = cardType
+		self.maskot = cardType(game)
 		self.terminator = kwargs.get('terminator', False)
-		self.cardType(game).onPileCreate(self, game) #X fucking D
-		self.name = self.cardType(game).name
+		self.maskot.onPileCreate(self, game) #X fucking D
+		self.name = self.maskot.name
 		self.tokens = []
 		for card in self:
 			game.allCards.append(card)
