@@ -772,7 +772,7 @@ class Vault(Action, CardAdd):
 		super(Vault, self).onPlay(player, **kwargs)
 		player.draw(amnt=2)
 		while player.hand:
-			choice = player.user(player.hand+['EndDiscard'], 'Choose discard')
+			choice = player.user([o.name for o in player.hand]+['EndDiscard'], 'Choose discard')
 			if choice>len(player.hand): break
 			player.discard(choice)
 			player.addCoin()
@@ -1892,7 +1892,7 @@ class Messenger(Action, CardAdd):
 			if kwargs['player'].game.piles[pile].viewTop() and kwargs['player'].game.piles[pile].viewTop().getPrice(kwargs['player'])<5 and kwargs['player'].game.piles[pile].viewTop().getPotionPrice(kwargs['player'])<1: options.append(pile)
 		if not options: return
 		choice = kwargs['player'].user(options, 'Choose gain')
-		for player in kwargs['player'].game.getPlayer(kwargs['player']): player.gainFromPile(kwargs['player'].game.piles[options[choice]])
+		for player in kwargs['player'].game.getPlayers(kwargs['player']): player.gainFromPile(kwargs['player'].game.piles[options[choice]])
 
 class Miser(Action, CardAdd):
 	name = 'Miser'
