@@ -6,4 +6,3 @@ throne room + treasure map
 call coinof the realm inden / før action
 call og durationn resolve order
 miser stavning
-vault

@@ -1,6 +1,7 @@
 import sys
 import server
 from cards import *
+from events import *
 import pickle
 import threading
 import struct
@@ -77,7 +78,10 @@ class OnlinePlayer(server.CST):
 			for player in game.players:	player.game = game
 			game.makePiles(baseSetBase)
 			options = baseSet+prosperity+seaside+adventures
+			allEvents = adventuresEvents
 			#game.makePiles(options)
+			#game.makeEvents(allEvents)
+			game.makeEvents(random.sample(allEvents, random.randint(0, 2)))
 			game.makePiles(random.sample(options, 10))
 			game.makeStartDeck()
 			gT = traa(game.start)
