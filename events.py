@@ -25,7 +25,7 @@ class Borrow(Event):
 	def onBuy(self, player, **kwargs):
 		if not self.checkBefore(player): return
 		player.addBuy()
-		player.minusCard = True
+		player.minusDraw = True
 		player.addCoin()
 		
 class Quest(Event):

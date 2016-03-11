@@ -2200,13 +2200,13 @@ class Storyteller(Action, CardAdd):
 		player.addAction()
 		player.addCoin()
 		for i in range(3):
-			if not self.hand: break
-			choice = self.user([o.name for o in self.hand]+['End Story Telling'], 'Choose treasure')
-			if choice+1>len(self.hand): break
-			if 'TREASURE' in self.hand[choice].types:
-				playedTreasure = self.hand.pop(choice)
-				self.inPlay.append(playedTreasure)
-				self.playTreasure(playedTreasure)
+			if not player.hand: break
+			choice = player.user([o.name for o in player.hand]+['End Story Telling'], 'Choose treasure')
+			if choice+1>len(player.hand): break
+			if 'TREASURE' in player.hand[choice].types:
+				playedTreasure = player.hand.pop(choice)
+				player.inPlay.append(playedTreasure)
+				player.playTreasure(playedTreasure)
 		player.draw(amnt=player.coins)
 		player.coins = 0
 			
