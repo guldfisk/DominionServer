@@ -82,7 +82,7 @@ class OnlinePlayer(server.CST):
 			#game.makePiles(options)
 			#game.makeEvents(allEvents)
 			game.makeEvents(random.sample(allEvents, random.randint(0, 2)))
-		#game.makePiles(random.sample(options, 10))
+			game.makePiles(random.sample(options, 10))
 			game.makeStartDeck()
 			gT = traa(game.start)
 			gT.start()
