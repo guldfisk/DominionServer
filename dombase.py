@@ -164,6 +164,8 @@ class Player(object):
 		self.user = testUser
 		self.name = kwargs.get('name', 'p1')
 		self.channelOut = None
+		self.uiupdate = None
+		self.uilog = copy.copy(self)
 		self.game = None
 		self.eotdraw = 5
 		self.journey = True
@@ -173,7 +175,6 @@ class Player(object):
 		self.journey = not self.journey
 		return self.journey
 	def request(self, head):
-		print('HEAD', head)
 		if head=='stat': return 'Actions: '+str(self.actions)+'\tCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)
 		elif head=='king':
 			ud = ''
@@ -181,9 +182,16 @@ class Player(object):
 			ud += '\n'
 			for key in sorted(self.game.eventSupply): ud+=key+' '+str(self.game.eventSupply[key].getPrice(self))+'$, '
 			return ud
+	def getStatView(self):
+		return 'Library: '+self.library.getView()+'\nActions: '+str(self.actions)+'\tCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)+'\nJourney: '+str(self.journey)+'\tMinus Coin: '+str(self.minusCoin)+'\tMinus Draw: '+str(self.minusDraw)
+	def updateUI(self):
+		self.uiupdate('play', 'hand', self.hand.getFullView())
+		self.uiupdate('play', 'play', self.inPlay.getView())
+		self.uiupdate('play', 'dcar', self.discardPile.getView())
+		self.uiupdate('play', 'stat', self.getStatView())
 	def toPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
-		if signal=='tryBuy': return
+		if signal=='tryBuy' or signal=='tryBuyEvent': return
 		s = [signal, {}]
 		hidden = False
 		censored = ['card']
@@ -193,6 +201,7 @@ class Player(object):
 			if not (key=='sender' or key=='hidden' or key=='kwargs' or (hidden and hidden!=self and key in censored)): s[1][key] = gN(kwargs[key])
 		if signal=='globalSetup': s[1]['you'] = self.name
 		self.channelOut(s)
+		self.updateUI()
 	def getView(self):
 		return 'Hand: '+self.hand.getFullView()+'\nIn Play: '+self.inPlay.getView()+'\nDiscard: '+self.discardPile.getView()+'\nLibrary: '+self.library.getView()+'\nCoins: '+str(self.coins)+'\tActions: '+str(self.actions)+'\tBuys: '+str(self.buys)
 	def view(self):

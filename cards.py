@@ -1938,7 +1938,7 @@ class Miser(Action, CardAdd):
 		self.price = 4
 	def onPlay(self, player, **kwargs):
 		super(Miser, self).onPlay(player, **kwargs)
-		if player.user(('Coins', 'Hidde Copper'), 'Choose mode'):
+		if player.user(('Coins', 'Hide Copper'), 'Choose mode'):
 			for i in range(len(player.hand)):
 				if player.hand[i].name=='Copper':
 					player.mats['Tavern'].append(player.hand.pop(i))

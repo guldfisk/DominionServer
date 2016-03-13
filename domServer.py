@@ -52,40 +52,49 @@ class OnlinePlayer(server.CST):
 		player.userAdress = self.addr
 		player.name = self.playerName
 		player.channelOut = self.channelOutFunc
+		player.uiupdate = self.uiupFunc
+	def uiupFunc(self, z, sz, c):
+		sc = c.encode('UTF-8')
+		self.send(('uiup'+z+sz).encode('UTF-8')+struct.pack('I', len(sc))+sc)
 	def channelOutFunc(self, l, head='updt', picklel=True):
 		if picklel:	payload = pickle.dumps(l)
 		else: payload = l.encode('UTF-8')
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
 	def sendPayload(self, head, payload):
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
+	def makeGame(self, allCards=False, **kwargs):
+		players = []
+		for key in server.csts:
+			if server.csts[key].player==None:
+				player = PPlayer()
+				server.csts[key].linkPlayer(player)
+				playerConnections[server.csts[key].oaddr] = player
+				players.append(player)
+		if not players: return
+		game = Game(players=players)
+		games.append(game)
+		for player in game.players:	player.game = game
+		game.makePiles(baseSetBase)
+		options = baseSet+prosperity+seaside+adventures
+		allEvents = adventuresEvents
+		if allCards:
+			game.makePiles(options)
+			game.makeEvents(allEvents)
+		else:
+			game.makeEvents(random.sample(allEvents, random.randint(0, 2)))
+			game.makePiles(random.sample(options, 10))
+		game.makeStartDeck()
+		gT = traa(game.start)
+		gT.start()
 	def command(self, ind):
 		print(ind)
 		if not len(ind)==4: return
 		if ind.decode('UTF-8')=='answ':
 			self.player.answerF(struct.unpack('I', self.recv(4))[0])
 		elif ind.decode('UTF-8')=='game':
-			players = []
-			for key in server.csts:
-				if server.csts[key].player==None:
-					player = PPlayer()
-					server.csts[key].linkPlayer(player)
-					playerConnections[server.csts[key].oaddr] = player
-					players.append(player)
-			if not players: return
-			game = Game(players=players)
-			games.append(game)
-			#game = Game(players=[server.csts[key] for key in server.csts])
-			for player in game.players:	player.game = game
-			game.makePiles(baseSetBase)
-			options = baseSet+prosperity+seaside+adventures
-			allEvents = adventuresEvents
-			#game.makePiles(options)
-			#game.makeEvents(allEvents)
-			game.makeEvents(random.sample(allEvents, random.randint(0, 2)))
-			game.makePiles(random.sample(options, 10))
-			game.makeStartDeck()
-			gT = traa(game.start)
-			gT.start()
+			self.makeGame()
+		elif ind.decode('UTF-8')=='test':
+			self.makeGame(True)
 		elif ind.decode('UTF-8')=='requ':
 			self.channelOutFunc(self.request(self.recv(4).decode('UTF-8')), 'resp', False)
 		elif ind.decode('UTF-8')=='reco':

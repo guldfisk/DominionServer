@@ -1,0 +1,715 @@
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, game, False
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+>globalSetup::       you: p8, players: [<__main__.PPlayer object at 0x0344D970>], 
+>setup::             player: p8, 
+>shuffle::           player: p8, 
+>draw::              player: p8, card: Copper, 
+>draw::              player: p8, card: Copper, 
+>draw::              player: p8, card: Copper, 
+>draw::              player: p8, card: Copper, 
+>draw::              player: p8, card: Estate, 
+************************************
+>beginRound::        round: 1, 
+------------------------------------
+>startTurn::         player: p8, 
+>actionPhase::       player: p8, 
+COMMAND, , False
+74
+73
+72
+71
+70
+69
+68
+67
+66
+65
+64
+63
+62
+61
+60
+59
+58
+57
+56
+55
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=348, family=2, type=1, proto=0>
+COMMAND, game, False
+>globalSetup::       players: [<__main__.PPlayer object at 0x0345F190>], you: p9, 
+>setup::             player: p9, 
+>shuffle::           player: p9, 
+>draw::              card: Copper, player: p9, 
+>draw::              card: Copper, player: p9, 
+>draw::              card: Estate, player: p9, 
+>draw::              card: Copper, player: p9, 
+>draw::              card: Copper, player: p9, 
+************************************
+>beginRound::        round: 1, 
+------------------------------------
+>startTurn::         player: p9, 
+>actionPhase::       player: p9, 
+COMMAND, , False
+74
+73
+72
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+>globalSetup::       players: [<__main__.PPlayer object at 0x0346A7F0>], you: p10, 
+>setup::             player: p10, 
+>shuffle::           player: p10, 
+>draw::              player: p10, card: Copper, 
+>draw::              player: p10, card: Copper, 
+>draw::              player: p10, card: Estate, 
+>draw::              player: p10, card: Copper, 
+>draw::              player: p10, card: Estate, 
+************************************
+>beginRound::        round: 1, 
+------------------------------------
+>startTurn::         player: p10, 
+>actionPhase::       player: p10, 
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=344, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, copper, False
+RELEASED OSDJKLADFJLADJFLDJFLDJFLSJFLJSD
+RELEASED OSDJKLADFJLADJFLDJFLDJFLSJFLJSD
+RELEASED OSDJKLADFJLADJFLDJFLDJFLSJFLJSD
+74
+73
+72
+71
+70
+69
+68
+67
+66
+65
+64
+63
+74
+RELEASED OSDJKLADFJLADJFLDJFLDJFLSJFLJSD
+RELEASED OSDJKLADFJLADJFLDJFLDJFLSJFLJSD
+RELEASED OSDJKLADFJLADJFLDJFLDJFLSJFLJSD
+RELEASED OSDJKLADFJLADJFLDJFLDJFLSJFLJSD
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, , False
+COMMAND, , False
+74
+73
+72
+71
+70
+69
+68
+67
+66
+65
+64
+63
+62
+61
+60
+59
+58
+57
+56
+55
+54
+53
+52
+51
+50
+49
+48
+47
+46
+45
+44
+43
+42
+52
+51
+50
+95
+95
+94
+93
+92
+91
+90
+89
+88
+87
+86
+85
+84
+83
+82
+81
+80
+79
+78
+77
+76
+75
+74
+73
+87
+86
+85
+84
+83
+82
+81
+80
+79
+78
+77
+76
+75
+74
+73
+72
+71
+70
+69
+68
+67
+66
+65
+64
+63
+62
+61
+60
+59
+58
+57
+56
+55
+54
+53
+52
+51
+50
+49
+48
+47
+46
+45
+44
+43
+42
+41
+40
+39
+38
+37
+36
+35
+34
+33
+32
+31
+30
+29
+28
+27
+26
+25
+24
+23
+22
+21
+20
+19
+49
+48
+47
+46
+45
+44
+43
+42
+41
+40
+39
+38
+37
+36
+35
+34
+33
+32
+31
+30
+29
+28
+27
+26
+25
+24
+23
+22
+21
+20
+19
+18
+17
+16
+15
+14
+13
+COMMAND, game, False
+12
+11
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+COMMAND, bad, False
+95
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, , False
+COMMAND, pl, False
+COMMAND, , False
+74
+73
+72
+71
+70
+69
+68
+67
+66
+65
+64
+63
+62
+61
+60
+59
+58
+57
+56
+55
+54
+53
+52
+51
+50
+49
+48
+47
+46
+45
+44
+43
+42
+41
+40
+39
+38
+37
+36
+35
+34
+33
+32
+31
+30
+29
+28
+27
+26
+25
+24
+23
+22
+21
+20
+19
+18
+17
+16
+15
+14
+13
+12
+11
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+74
+73
+72
+71
+70
+69
+68
+67
+66
+65
+64
+63
+62
+61
+60
+59
+58
+57
+56
+55
+54
+53
+52
+51
+50
+49
+48
+47
+46
+45
+44
+43
+42
+41
+40
+39
+38
+37
+36
+35
+34
+33
+32
+31
+30
+29
+28
+27
+26
+25
+24
+23
+22
+21
+20
+19
+18
+17
+16
+15
+14
+13
+12
+11
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, , False
