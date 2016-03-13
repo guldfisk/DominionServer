@@ -9,11 +9,12 @@ class CPile(list):
 	def __init__(self, *args, **kwargs):
 		super(CPile, self).__init__(*args)
 		self.faceup = kwargs.get('faceup', True)
+		self.ordered = kwargs.get('ordered', False)
 		self.name = kwargs.get('name', True)
 	def getFullView(self):
 		ud = ''
-		for i in range(len(self)-1, -1, -1):
-			ud += self[i].view() + ', '
+		for item in set([o.name for o in self]):
+			ud += str([o.name for o in self].count(item))+' '+item+', '
 		return ud[:-1]
 	def getView(self):
 		if self.faceup: return self.getFullView()
@@ -61,6 +62,18 @@ class Game(object):
 		self.turnFlag = ''
 		self.round = 0
 		self.dp = dp.Dispatcher()
+	def pilesView(self, player):
+		ud = ''
+		for key in sorted(self.piles): ud+=key+' '+str(self.piles[key].maskot.getPrice(player))+'$: '+str(len(self.piles[key]))+', '
+		return ud
+	def eventsView(self, player):
+		ud = ''
+		for key in sorted(self.eventSupply): ud+=key+' '+str(self.eventSupply[key].getPrice(player))+'$, '
+		return ud
+	def NSPilesView(self, player):
+		ud = ''
+		for key in sorted(self.NSPiles): ud+=key+' '+str(self.NSPiles[key].maskot.getPrice(player))+'$: '+str(len(self.NSPiles[key]))+', '
+		return ud
 	def require(self, card, **kwargs):
 		if card.name in list(self.NSPiles): return
 		self.NSPiles[card.name] = Pile(card, self)
@@ -118,7 +131,7 @@ class Game(object):
 		if not name in list(self.globalMats): self.globalMats[name] = []
 	def addMat(self, name):
 		for player in self.players:
-			if not name in list(player.mats): player.mats[name] = []
+			if not name in list(player.mats): player.mats[name] = CPile()
 	def addToken(self, token):
 		for player in self.players:
 			if not token.name in list(player.tokens): player.tokens[token.name] = token(self, playerOwner=player)
@@ -156,7 +169,7 @@ class Player(object):
 		self.buys = 0
 		self.victories = 0
 		self.hand = CPile(name='hand', faceup=False)
-		self.library = CPile(name='library', faceup=False)
+		self.library = CPile(name='library', faceup=False, ordered=True)
 		self.inPlay = CPile(name='inPlay')
 		self.discardPile = CPile(name='discardPile')
 		self.mats = {}
@@ -171,6 +184,10 @@ class Player(object):
 		self.journey = True
 		self.minusCoin = False
 		self.minusDraw = False
+	def matsView(self):
+		ud = ''
+		for key in self.mats: ud += key+': '+self.mats[key].getView()+'\n'
+		return ud
 	def flipJourney(self):
 		self.journey = not self.journey
 		return self.journey
@@ -183,12 +200,26 @@ class Player(object):
 			for key in sorted(self.game.eventSupply): ud+=key+' '+str(self.game.eventSupply[key].getPrice(self))+'$, '
 			return ud
 	def getStatView(self):
-		return 'Library: '+self.library.getView()+'\nActions: '+str(self.actions)+'\tCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)+'\nJourney: '+str(self.journey)+'\tMinus Coin: '+str(self.minusCoin)+'\tMinus Draw: '+str(self.minusDraw)
+		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+'\tCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)+'\nJourney: '+str(self.journey)+'\nMinus Coin: '+str(self.minusCoin)+'\tMinus Draw: '+str(self.minusDraw)
+	def getOpponentView(self):
+		return self.inPlay.getView(), self.getStatView(), self.discardPile.getView(), self.matsView()
 	def updateUI(self):
 		self.uiupdate('play', 'hand', self.hand.getFullView())
 		self.uiupdate('play', 'play', self.inPlay.getView())
 		self.uiupdate('play', 'dcar', self.discardPile.getView())
 		self.uiupdate('play', 'stat', self.getStatView())
+		self.uiupdate('play', 'mats', self.matsView())
+		self.uiupdate('tras', 'nnnn', self.game.trash.getView())
+		self.uiupdate('play', 'stat', self.getStatView())
+		self.uiupdate('king', 'pile', self.game.pilesView(self))
+		self.uiupdate('king', 'even', self.game.eventsView(self))
+		self.uiupdate('king', 'nspi', self.game.NSPilesView(self))
+		if not self==self.game.activePlayer and self.game.activePlayer: oppoV=self.game.activePlayer.getOpponentView()
+		else: oppoV = self.game.getPreviousPlayer(self).getOpponentView()
+		self.uiupdate('oppo', 'play', oppoV[0])
+		self.uiupdate('oppo', 'stat', oppoV[1])
+		self.uiupdate('oppo', 'dcar', oppoV[2])
+		self.uiupdate('oppo', 'mats', oppoV[3])
 	def toPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
 		if signal=='tryBuy' or signal=='tryBuyEvent': return

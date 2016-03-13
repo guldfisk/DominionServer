@@ -166,18 +166,18 @@ class Kingdom(MultiWindow):
 		super(Kingdom, self).__init__(nlines, ncols, y, x)
 		self.zones = {
 			'pile': curses.newwin(math.floor(nlines*3/5), ncols, y, x),
-			'even': curses.newwin(math.floor(nlines*2/5), math.floor(ncols/2), y+math.floor(nlines*3/5), x),
-			'nspi': curses.newwin(math.floor(nlines*2/5), math.floor(ncols/2), y+math.floor(nlines*3/5), x+math.floor(ncols/2)),
+			'even': curses.newwin(math.floor(nlines*2/5), math.floor(ncols/4), y+math.floor(nlines*3/5), x),
+			'nspi': curses.newwin(math.floor(nlines*2/5), math.floor(ncols*3/4), y+math.floor(nlines*3/5), x+math.floor(ncols/4)),
 		}
 
 class Opponent(MultiWindow):
 	def __init__(self, nlines, ncols, y, x):
 		super(Opponent, self).__init__(nlines, ncols, y, x)
 		self.zones = {
-			'play': curses.newwin(math.floor(nlines/2), math.floor(ncols*2/3), y, x),
-			'stat': curses.newwin(math.floor(nlines/2), math.floor(ncols/3), y, x+math.floor(ncols*2/3)),
-			'dcar': curses.newwin(math.floor(nlines/2), math.floor(ncols*2/3), y+math.floor(nlines/2), x),
-			'mats': curses.newwin(math.floor(nlines/2), math.floor(ncols/3), y+math.floor(nlines/2), x+math.floor(ncols*2/3)),
+			'play': curses.newwin(math.floor(nlines/2), math.floor(ncols/2), y, x),
+			'stat': curses.newwin(math.floor(nlines/2), math.floor(ncols/2), y, x+math.floor(ncols/2)),
+			'dcar': curses.newwin(math.floor(nlines/2), math.floor(ncols/2), y+math.floor(nlines/2), x),
+			'mats': curses.newwin(math.floor(nlines/2), math.floor(ncols/2), y+math.floor(nlines/2), x+math.floor(ncols/2)),
 		}
 	
 logw = None
@@ -212,7 +212,7 @@ def nstart(stdscr):
 	global opponent
 	curses.start_color()
 	maxY, maxX = stdscr.getmaxyx()
-	logw = GameInput(windowX=math.floor(maxX/2), windowY=math.floor(maxY/3), height=math.floor(maxY*2/3)-2, width=maxX-math.floor(maxX/2)-1)
+	logw = GameInput(windowX=math.floor(maxX/2), windowY=math.floor(maxY/3), height=math.floor(maxY*2/3)-2, width=maxX-math.floor(maxX/2)-1, scrollDepth=1000)
 	cw = NetInput(windowX=math.floor(maxX/4), windowY=math.floor(maxY/8*7), height=maxY-math.floor(maxY/8*7)-2, width=math.floor(maxX/4)-1)
 	netstatw = curses.newwin(maxY-math.floor(maxY/8*7), math.floor(maxX/4)-1, math.floor(maxY/8*7), 0)
 	trash = curses.newwin(math.floor(maxY/8), math.floor(maxX/2), math.floor(maxY*7/16), 0)
@@ -257,39 +257,46 @@ def answer(**kwargs):
 	
 def lyt(**kwargs):
 	while True:
-		head = s.recv(4).decode('UTF-8')
+		try: head = s.recv(4).decode('UTF-8')
+		except: continue
 		if head=='ques':
-			length = struct.unpack('I', s.recv(4))[0]
-			recieved = s.recv(length)
-			if not len(recieved)==length:
-				logw.addstr('lost package')
-				continue
-			upickle = pickle.loads(recieved)
+			try:
+				length = struct.unpack('I', s.recv(4))[0]
+				recieved = s.recv(length)
+				if not len(recieved)==length:
+					logw.addstr('lost package')
+					continue
+				upickle = pickle.loads(recieved)
+			except: continue
 			aF = traa(answer, name=upickle[0], options=upickle[1])
 			aF.start()
 		elif head=='updt':
-			length = struct.unpack('I', s.recv(4))[0]
-			recieved = s.recv(length)
-			if not len(recieved)==length:
-				logw.addstr('lost package')
-				continue
-			l = pickle.loads(recieved)
+			try:
+				length = struct.unpack('I', s.recv(4))[0]
+				recieved = s.recv(length)
+				if not len(recieved)==length:
+					logw.addstr('lost package')
+					continue
+				l = pickle.loads(recieved)
+			except: continue
 			updt(l[0], **l[1])
 		elif head=='resp':
-			recieved = s.recv(4)
-			if not len(recieved)==4:
-				logw.addstr('lost package')
-				continue
-			length = struct.unpack('I', recieved)[0]
+			try:
+				recieved = s.recv(4)
+				if not len(recieved)==4:
+					logw.addstr('lost package')
+					continue
+				length = struct.unpack('I', recieved)[0]
+			except: continue
 			logw.addstr(s.recv(length).decode('UTF-8'))
 		elif head=='uiup':
-			zone = s.recv(4).decode('UTF-8')
-			subzone = s.recv(4).decode('UTF-8')
-			length = struct.unpack('I', s.recv(4))[0]
-			content = s.recv(length)
-			try: stringcontent = content.decode('UTF-8')
+			try:
+				zone = s.recv(4).decode('UTF-8')
+				subzone = s.recv(4).decode('UTF-8')
+				length = struct.unpack('I', s.recv(4))[0]
+				content = s.recv(length).decode('UTF-8')
 			except: continue
-			uiup(zone, subzone, stringcontent)
+			uiup(zone, subzone, content)
 		
 def main():
 	global s
