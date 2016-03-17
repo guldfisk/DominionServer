@@ -86,4 +86,20 @@ class ScoutingParty(Event):
 			player.discardCard(cards.pop(player.user([o.name for o in cards], 'Choose discard '+str(i+1))))
 		while cards: player.library.append(cards.pop(player.user([o.name for o in cards], 'Put card back')))
 		
-adventuresEvents = [Alms, Borrow, Quest, Save, ScoutingParty]
+class TravelingFair(Event):
+	name = 'Traveling Fair'
+	def __init__(self, game, **kwargs):
+		super(TravelingFair, self).__init__(game, **kwargs)
+		self.price = 2
+		self.connectedPlayers = []
+		game.dp.connect(self.reset, signal='startTurn')
+		game.dp.connect(self.trigger, signal='gain')
+	def onBuy(self, player, **kwargs):
+		player.addBuy(amnt=2)
+		self.connectedPlayers.append(player)
+	def reset(self, signal, **kwargs):
+		self.connectedPlayers[:] = []
+	def trigger(self, signal, **kwargs):
+		if kwargs['player'] in self.connectedPlayers and kwargs['player'].user(('no', 'Top'), 'Use Traveling Fair'): kwargs['kwargs']['to'] = kwargs['player'].library
+	
+adventuresEvents = [Alms, Borrow, Quest, Save, ScoutingParty, TravelingFair]

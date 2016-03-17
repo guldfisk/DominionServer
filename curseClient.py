@@ -77,6 +77,7 @@ class ScrollWithInput(object):
 		self.pos = self.scrollDepth-self.height-1
 		self.iput = ''
 		self.running = True
+		self.escaped = True
 	def validation(self, c):
 		if c==ord('q'): sys.exit()
 		elif c==curses.KEY_UP:
@@ -96,6 +97,7 @@ class ScrollWithInput(object):
 		self.running = True
 		while self.running:
 			s = self.textbox.edit(self.validation)
+			if not self.running: continue
 			self.command(s[:-1])
 			self.iw.clear()
 			#self.log.addstr(self.scrollDepth-1, 0, s+'\n')
@@ -310,13 +312,3 @@ def main():
 
 if __name__ == '__main__':
 	curses.wrapper(nstart)
-	
-"""
-if __name__=='__main__':
-	#HOST = input('connect to: ')
-	#if HOST=='': HOST = 'localhost'
-	#HOST = 'localhost'
-	#HOST = str(socket.gethostbyname(socket.gethostname()))
-	#print(HOST)
-	main()
-"""
