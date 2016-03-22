@@ -214,6 +214,7 @@ def nstart(stdscr):
 	global opponent
 	curses.start_color()
 	maxY, maxX = stdscr.getmaxyx()
+	log(maxY, maxX)
 	logw = GameInput(windowX=math.floor(maxX/2), windowY=math.floor(maxY/3), height=math.floor(maxY*2/3)-2, width=maxX-math.floor(maxX/2)-1, scrollDepth=1000)
 	cw = NetInput(windowX=math.floor(maxX/4), windowY=math.floor(maxY/8*7), height=maxY-math.floor(maxY/8*7)-2, width=math.floor(maxX/4)-1)
 	netstatw = curses.newwin(maxY-math.floor(maxY/8*7), math.floor(maxX/4)-1, math.floor(maxY/8*7), 0)

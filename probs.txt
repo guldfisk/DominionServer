@@ -10,7 +10,6 @@ something med treasurys
 fucking disciple throne room arcane shit
 8 disciples??
 royal carriage trigger aldrif
-inf lighthouse
 Traceback (most recent call last):
   File "C:\Python33\lib\threading.py", line 901, in _bootstrap_inner
     self.run()
