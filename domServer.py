@@ -29,6 +29,7 @@ class PPlayer(Player):
 		self.answer = None
 		self.userAddress = None
 	def use(self, options, name='noName'):
+		for player in self.game.players: player.updateUI()
 		self.payload = pickle.dumps((name, options))
 		self.oplayer.sendPayload('ques', self.payload)
 		self.useLock.acquire()

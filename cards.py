@@ -2321,7 +2321,7 @@ class Apprentice(Action, CardAdd):
 		choice = player.user([o.name for o in player.hand], 'Choose trash')
 		coinVal, potionVal = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player)
 		player.trash(choice)
-		if potionValue>0: coinVal += 2
+		if potionVal>0: coinVal += 2
 		player.draw(amnt=coinVal)
 		
 class Transmute(Action, CardAdd):

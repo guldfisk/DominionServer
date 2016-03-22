@@ -235,7 +235,7 @@ class Player(object):
 			if not (key=='sender' or key=='hidden' or key=='kwargs' or (hidden and hidden!=self and key in censored)): s[1][key] = gN(kwargs[key])
 		if signal=='globalSetup': s[1]['you'] = self.name
 		self.channelOut(s)
-		self.updateUI()
+		#self.updateUI()
 	def getView(self):
 		return 'Hand: '+self.hand.getFullView()+'\nIn Play: '+self.inPlay.getView()+'\nDiscard: '+self.discardPile.getView()+'\nLibrary: '+self.library.getView()+'\nCoins: '+str(self.coins)+'\tActions: '+str(self.actions)+'\tBuys: '+str(self.buys)
 	def view(self):

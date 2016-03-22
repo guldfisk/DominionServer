@@ -9,7 +9,7 @@ boontokens fra multiple players
 something med treasurys
 fucking disciple throne room arcane shit
 8 disciples??
-royal carriage
+royal carriage trigger aldrif
 inf lighthouse
 Traceback (most recent call last):
   File "C:\Python33\lib\threading.py", line 901, in _bootstrap_inner
@@ -27,6 +27,7 @@ Traceback (most recent call last):
 AttributeError: 'NoneType' object has no attribute 'name'
 
 ^WTF?
+duchess trigger ikke
 
 ------------------------------------------------------------------------------------
 global mats
