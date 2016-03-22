@@ -32,7 +32,7 @@ class CST(threading.Thread):
 		self.parent = kwargs.get('parent', None)
 	def run(self):
 		while self.running:
-			data = self.recv()
+			data = self.recvLen()
 			if data==b'':
 				print('recived empty string')
 				self.kill()
@@ -41,16 +41,17 @@ class CST(threading.Thread):
 	def command(self, ind):
 		pass
 	def recv(self, l=None):
-		if not l:
-			ll = self.defaultRecvLen
-		else:
-			ll = l
-		try:
-			data = self.conn.recv(ll)
+		if not l: ll = self.defaultRecvLen
+		else: ll = l
+		try: data = self.conn.recv(ll)
 		except:
 			print('error: conn.recv')
 			data = b''
 		return(data)
+	def recvLen(self, l=4):
+		bytes = b''
+		while len(bytes)<l: bytes += self.conn.recv(1)
+		return bytes
 	def recvStr(self):
 		data = self.recv()
 		try:
@@ -97,8 +98,7 @@ class SCST(CST):
 			else: self.command(data)
 	def send(self, ind):
 		self.conn.sendall(ind)
-		
-		
+			
 class HBCT(CST):
 	def __init__(self, **kwargs):
 		super(HBCT, self).__init__(**kwargs)

@@ -161,7 +161,7 @@ class Game(object):
 		for player in self.players:
 			for i in range(7): player.gainFromPile(self.piles['Copper'])
 			for i in range(3): player.gainFromPile(self.piles['Estate'])
-			for i in range(1): player.gainFromPile(self.piles['Possesion'])
+			#for i in range(1): player.gainFromPile(self.piles['Possesion'])
 			for card in player.discardPile: self.allCards.append(card)
 	
 class Player(object):

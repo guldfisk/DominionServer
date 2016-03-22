@@ -2567,7 +2567,7 @@ class Crossroads(Action, CardAdd):
 		player.draw(amnt=victories)
 		crosses = 0
 		for i in range(len(player.game.events)-1, -1, -1):
-			if player.game.events[0]=='playAction' and player.game.events[1]['card'].name=='Crossroads']:
+			if player.game.events[0]=='playAction' and player.game.events[1]['card'].name=='Crossroads':
 				crosses += 1
 				if crosses>1: return
 			elif player.game.events[0]=='startTurn': break
@@ -2603,7 +2603,7 @@ class FoolsGold(Treasure, Reaction, CardAdd):
 		super(FoolsGold, self).onPlay(player, **kwargs)
 		fools = 0
 		for i in range(len(player.game.events)-1, -1, -1):
-			if player.game.events[0]=='playTreasure' and player.game.events[1]['card'].name=='FoolsGold']:
+			if player.game.events[0]=='playTreasure' and player.game.events[1]['card'].name=='FoolsGold':
 				fools += 1
 				if fools>1:
 					player.addCoin(amnt=4)

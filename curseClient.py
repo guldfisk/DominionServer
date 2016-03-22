@@ -257,14 +257,20 @@ def updt(signal, **kwargs):
 def answer(**kwargs):
 	s.send('answ'.encode('UTF-8')+struct.pack('I', testUser(kwargs['options'], kwargs['name'])))
 	
+def recvLen(s, l=4):
+	#return s.recv(l)
+	bytes = b''
+	while len(bytes)<l: bytes += s.recv(1)
+	return bytes
+	
 def lyt(**kwargs):
 	while True:
-		try: head = s.recv(4).decode('UTF-8')
+		try: head = recvLen(s).decode('UTF-8')
 		except: continue
 		if head=='ques':
 			try:
-				length = struct.unpack('I', s.recv(4))[0]
-				recieved = s.recv(length)
+				length = struct.unpack('I', recvLen(s))[0]
+				recieved = recvLen(s, length)
 				if not len(recieved)==length:
 					logw.addstr('lost package')
 					continue
@@ -274,8 +280,8 @@ def lyt(**kwargs):
 			aF.start()
 		elif head=='updt':
 			try:
-				length = struct.unpack('I', s.recv(4))[0]
-				recieved = s.recv(length)
+				length = struct.unpack('I', recvLen(s))[0]
+				recieved = recvLen(s, length)
 				if not len(recieved)==length:
 					logw.addstr('lost package')
 					continue
@@ -284,19 +290,19 @@ def lyt(**kwargs):
 			updt(l[0], **l[1])
 		elif head=='resp':
 			try:
-				recieved = s.recv(4)
+				recieved = recvLen(s)
 				if not len(recieved)==4:
 					logw.addstr('lost package')
 					continue
 				length = struct.unpack('I', recieved)[0]
 			except: continue
-			logw.addstr(s.recv(length).decode('UTF-8'))
+			logw.addstr(recvLen(s, length).decode('UTF-8'))
 		elif head=='uiup':
 			try:
-				zone = s.recv(4).decode('UTF-8')
-				subzone = s.recv(4).decode('UTF-8')
-				length = struct.unpack('I', s.recv(4))[0]
-				content = s.recv(length).decode('UTF-8')
+				zone = recvLen(s).decode('UTF-8')
+				subzone = recvLen(s).decode('UTF-8')
+				length = struct.unpack('I', recvLen(s))[0]
+				content = recvLen(s, length).decode('UTF-8')
 			except: continue
 			uiup(zone, subzone, content)
 		

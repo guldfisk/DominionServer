@@ -75,7 +75,7 @@ class OnlinePlayer(server.CST):
 		games.append(game)
 		for player in game.players:	player.game = game
 		game.makePiles(baseSetBase)
-		options = baseSet+prosperity+seaside+adventures+alchemy+crossroads
+		options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands
 		allEvents = adventuresEvents
 		if allCards:
 			game.makePiles(options)
@@ -90,13 +90,13 @@ class OnlinePlayer(server.CST):
 		print(ind)
 		if not len(ind)==4: return
 		if ind.decode('UTF-8')=='answ':
-			self.player.answerF(struct.unpack('I', self.recv(4))[0])
+			self.player.answerF(struct.unpack('I', self.recvLen(4))[0])
 		elif ind.decode('UTF-8')=='game':
 			self.makeGame()
 		elif ind.decode('UTF-8')=='test':
 			self.makeGame(True)
 		elif ind.decode('UTF-8')=='requ':
-			self.channelOutFunc(self.request(self.recv(4).decode('UTF-8')), 'resp', False)
+			self.channelOutFunc(self.request(self.recvLen(4).decode('UTF-8')), 'resp', False)
 		elif ind.decode('UTF-8')=='reco':
 			print(self.oaddr, playerConnections)
 			if not self.oaddr in list(playerConnections): return
