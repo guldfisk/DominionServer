@@ -684,9 +684,9 @@ class Contraband(Treasure, CardAdd):
 	def trigger(self, signal, **kwargs):
 		if kwargs['player']==self.owner and kwargs['pile']==self.banning: return True
 	def connect(self, **kwargs):
-		player.game.dp.connect(self.trigger, signal='tryBuy')
+		self.owner.game.dp.connect(self.trigger, signal='tryBuy')
 	def disconnect(self, **kwargs):
-		player.game.dp.disconnect(self.trigger, signal='tryBuy')	
+		self.owner.game.dp.disconnect(self.trigger, signal='tryBuy')	
 		
 class CountingHouse(Action, CardAdd):
 	name = 'Counting House'
@@ -2155,7 +2155,7 @@ class Relic(Treasure, Attack, CardAdd):
 		self.price = 5
 	def onPlay(self, player, **kwargs):
 		super(Relic, self).onPlay(player, **kwargs)
-		for aplayer in player.getPlayers(player):
+		for aplayer in player.game.getPlayers(player):
 			if not aplayer==player: aplayer.attack(self.attack, self)
 	def attack(self, player, **kwargs):
 		player.minusDraw = True

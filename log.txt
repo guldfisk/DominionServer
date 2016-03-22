@@ -3424,3 +3424,51 @@ COMMAND, test, False
 964
 963
 962
+COMMAND, host lost-world.dk, False
+COMMAND, conn, True
+Connecting
+COMMAND, host lost-world.dk, False
+COMMAND, conn, True
+Connecting
+COMMAND, host lost-world.dk, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, host lost-world.dk, False
+COMMAND, con, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, host lost-world.dk, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, , False
