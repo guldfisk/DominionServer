@@ -1060,17 +1060,21 @@ class Lighthouse(Action, Duration, CardAdd):
 		Duration.__init__(self, game, **kwargs)
 		self.price = 2
 	def onPlay(self, player, **kwargs):
-		super(Lighthouse, self).onPlay(player, **kwargs)
 		player.addAction()
 		player.addCoin()
 		self.age = 0
+		self.nexts.append(self.next)
 		player.game.dp.connect(self.nextage)
 	def nextage(self, signal, **kwargs):
 		if signal=='startTurn' and kwargs['player']==self.owner:
 			self.age+=1
-			self.owner.addCoin()
+			while self.nexts:
+				self.owner.game.dp.send(signal='duration', card=self)
+				self.nexts.pop()()
 		elif signal=='attack' and kwargs['player']==self.owner: return True
-
+	def next(self, **kwargs):
+		self.owner.addCoin()
+		
 class NativeVillage(Action, CardAdd):
 	name = 'Native Village'
 	def __init__(self, game, **kwargs):
@@ -2069,7 +2073,7 @@ class BridgeTroll(Action, Duration, Attack, CardAdd):
 		self.reduction = 0
 
 class DistantLands(Action, Victory, CardAdd):
-	name = 'DistantLands'
+	name = 'Distant Lands'
 	def __init__(self, game, **kwargs):
 		super(DistantLands, self).__init__(game, **kwargs)
 		Victory.__init__(self, game, **kwargs)
@@ -2317,6 +2321,7 @@ class Apprentice(Action, CardAdd):
 		self.price = 5
 	def onPlay(self, player, **kwargs):
 		super(Apprentice, self).onPlay(player, **kwargs)
+		player.addAction()
 		if not player.hand: return
 		choice = player.user([o.name for o in player.hand], 'Choose trash')
 		coinVal, potionVal = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player)

@@ -28,6 +28,7 @@ AttributeError: 'NoneType' object has no attribute 'name'
 
 ^WTF?
 duchess trigger ikke
+multi vindue ting breaker input
 
 ------------------------------------------------------------------------------------
 global mats
