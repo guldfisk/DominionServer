@@ -1,35 +1,24 @@
-import threading
+import multiprocessing
 import time
 
-class traa(threading.Thread):
-	def __init__(self, f, **kwargs):
-		threading.Thread.__init__(self)
-		self.f = f
-		self.vals = kwargs
-	def run(self):
-		self.f(**self.vals)
+# bar
+def bar():
+    for i in range(100):
+        print('Tick')
+        time.sleep(1)
 
-class InputBuffer(object):
-	def __init__(self):
-		self.lock = threading.Semaphore()
-		self.lock.acquire()
-		self.value = []
-	def get(self):
-		if self.value: return self.value.pop()
-		else:
-			self.lock.acquire()
-			return self.value.pop()
-	def add(self, value):
-		self.value = [value]
-		self.lock.release()
-		
-ipbuf = InputBuffer()
-		
-def pp():
-	while True: print(ipbuf.get())
-	
-st = traa(pp)
-st.start()
+if __name__ == '__main__':
+    # Start bar as a process
+    p = multiprocessing.Process(target=bar)
+    p.start()
 
-while True:
-	ipbuf.add(input(': '))
+    # Wait for 10 seconds or until process finishes
+    p.join(10)
+
+    # If thread is still active
+    if p.is_alive():
+        print("running... let's kill it...")
+
+        # Terminate
+        p.terminate()
+        p.join()

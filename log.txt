@@ -2448,3 +2448,467 @@ COMMAND, conn, True
 Connecting
 CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
 COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+974
+973
+972
+971
+970
+969
+968
+967
+966
+965
+964
+963
+962
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, , False
+974
+973
+972
+971
+970
+969
+968
+967
+966
+965
+964
+963
+962
+961
+960
+959
+958
+957
+956
+955
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, game, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, tets, False
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, tets, False
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=360, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+974
+973
+972
+971
+970
+969
+968
+967
+966
+965
+964
+963
+962
+961
+960
+959
+958
+957
+956
+955
+954
+953
+952
+951
+950
+949
+948
+947
+946
+945
+944
+943
+942
+941
+940
+939
+938
+937
+936
+935
+934
+933
+932
+931
+930
+929
+928
+927
+926
+925
+924
+923
+922
+921
+920
+919
+918
+917
+916
+915
+914
+913
+912
+911
+910
+909
+908
+907
+906
+905
+904
+903
+902
+901
+900
+899
+898
+897
+896
+895
+894
+893
+892
+891
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+974
+973
+972
+971
+970
+969
+968
+967
+966
+965
+964
+963
+962
+961
+960
+959
+958
+957
+956
+955
+954
+953
+952
+951
+950
+949
+948
+947
+946
+945
+944
+943
+942
+941
+940
+939
+938
+937
+936
+935
+934
+933
+932
+931
+930
+929
+928
+927
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+974
+973
+972
+971
+970
+969
+968
+967
+966
+965
+964
+963
+962
+961
+960
+974
+973
+972
+971
+970
+969
+968
+967
+966
+965
+964
+963
+962
+961
+960
+959
+958
+974
+973
+972
+971
+970
+969
+968
+967
+966
+965
+964
+963
+962
+961
+960
+959
+958
+957
+956
+955
+954
+953
+952
+951
+950
+949
+948
+947
+946
+945
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, , False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, , False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+974
+973
+972
+971
+970
+969
+968
+967
+966
+965
+964
+963
+962
+961
+960
+959
+958
+957
+956
+955
+954
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=356, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, conn, True
+Connecting
+CONNECTED, <socket.socket object, fd=352, family=2, type=1, proto=0>
+COMMAND, test, False

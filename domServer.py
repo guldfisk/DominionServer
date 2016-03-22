@@ -75,7 +75,7 @@ class OnlinePlayer(server.CST):
 		games.append(game)
 		for player in game.players:	player.game = game
 		game.makePiles(baseSetBase)
-		options = baseSet+prosperity+seaside+adventures
+		options = baseSet+prosperity+seaside+adventures+alchemy+crossroads
 		allEvents = adventuresEvents
 		if allCards:
 			game.makePiles(options)

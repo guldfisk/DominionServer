@@ -74,6 +74,9 @@ class Game(object):
 		ud = ''
 		for key in sorted(self.NSPiles): ud+=key+' '+str(self.NSPiles[key].maskot.getPrice(player))+'$: '+str(len(self.NSPiles[key]))+', '
 		return ud
+	def requirePile(self, card, **kwargs):
+		if card.name in list(self.piles): return
+		self.piles[card.name] = Pile(card, self)
 	def require(self, card, **kwargs):
 		if card.name in list(self.NSPiles): return
 		self.NSPiles[card.name] = Pile(card, self)
@@ -113,7 +116,7 @@ class Game(object):
 		if not cplayer in self.players: return
 		if not len(self.players)>1: return cplayer
 		for i in range(len(self.players)):
-			if self.players[i]==cplayer: return self.players[(i+1)%len(players)]	
+			if self.players[i]==cplayer: return self.players[(i+1)%len(self.players)]	
 	def getPreviousPlayer(self, cplayer):
 		if not cplayer in self.players: return
 		if not len(self.players)>1: return cplayer
@@ -158,7 +161,7 @@ class Game(object):
 		for player in self.players:
 			for i in range(7): player.gainFromPile(self.piles['Copper'])
 			for i in range(3): player.gainFromPile(self.piles['Estate'])
-			#for i in range(1): player.gainFromPile(self.NSPiles['Teacher'])
+			for i in range(1): player.gainFromPile(self.piles['Possesion'])
 			for card in player.discardPile: self.allCards.append(card)
 	
 class Player(object):
@@ -200,7 +203,7 @@ class Player(object):
 			for key in sorted(self.game.eventSupply): ud+=key+' '+str(self.game.eventSupply[key].getPrice(self))+'$, '
 			return ud
 	def getStatView(self):
-		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+'\tCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)+'\nJourney: '+str(self.journey)+'\nMinus Coin: '+str(self.minusCoin)+'\tMinus Draw: '+str(self.minusDraw)
+		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+'\tJourney: '+str(self.journey)+'\nCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)+'\tPotions: '+str(self.potions)+'\nMinus Coin: '+str(self.minusCoin)+'\tMinus Draw: '+str(self.minusDraw)
 	def getOpponentView(self):
 		return self.inPlay.getView(), self.getStatView(), self.discardPile.getView(), self.matsView()
 	def updateUI(self):
@@ -246,7 +249,7 @@ class Player(object):
 		self.game.activePlayer = self
 		self.game.turnFlag = ''
 		self.resetValues()
-		self.game.dp.send(signal='startTurn', player=self)
+		self.game.dp.send(signal='startTurn', player=self, flags=self.game.turnFlag)
 		self.actionPhase()
 		self.treasurePhase()
 		self.buyPhase()
@@ -304,18 +307,20 @@ class Player(object):
 			self.discardPile.append(card)
 	def destroyAll(self, **kwargs):
 		print('STARTDESTROYALL', [o.name for o in self.inPlay], self.inPlay)
+		cards = []
 		for card in copy.copy(self.inPlay):
-			if not card.onDestroy(self) and not self.game.dp.send(signal='destroy', player=self, card=card):
-				for i in range(len(self.inPlay)):
-					if card==self.inPlay[i]:
-						card.onLeavePlay(self)
-						self.discardPile.append(self.inPlay.pop(i))
-						break
+			if not card.onDestroy(self) and not self.game.dp.send(signal='destroy', player=self, card=card): cards.append(card)
+		for card in cards:
+			for i in range(len(self.inPlay)):
+				if card==self.inPlay[i]:
+					card.onLeavePlay(self)
+					self.discardPile.append(self.inPlay.pop(i))
+					break
 		print('ENDDESTROYALL', [o.name for o in self.inPlay], len(self.inPlay))
 	def getCard(self, **kwargs):
 		if not self.library:
 			self.reshuffle()
-			if not self.library: return 'Empty'
+			if not self.library: return
 		return self.library.pop()
 	def getCards(self, amnt=1, **kwargs):
 		cards = []
@@ -433,19 +438,26 @@ class Player(object):
 		attack(self, card=source, **kwargs)
 	def addCoin(self, **kwargs):
 		if self.minusCoin:
-			self.game.dp.send(signal='addCoin', player=self, amnt=np.max(kwargs.get('amnt', 1)-1, 0))
-			self.coins += np.max(kwargs.get('amnt', 1)-1, 0)
+			amn = np.max(kwargs.get('amnt', 1)-1, 0)
 			self.minusCoin = False
-		else:
-			self.game.dp.send(signal='addCoin', player=self, amnt=kwargs.get('amnt', 1))
-			self.coins += kwargs.get('amnt', 1)
+		else: amn = kwargs.get('amnt', 1)
+		if amn==0: return
+		self.game.dp.send(signal='addCoin', player=self, amnt=amn)
+		self.coins += amn
+	def addPotion(self, **kwargs):
+		if kwargs.get('amnt', 1)==0: return
+		self.game.dp.send(signal='addPotion', player=self, amnt=kwargs.get('amnt', 1))
+		self.potions += kwargs.get('amnt', 1)
 	def addBuy(self, **kwargs):
+		if kwargs.get('amnt', 1)==0: return
 		self.game.dp.send(signal='addBuy', player=self, amnt=kwargs.get('amnt', 1))
 		self.buys += kwargs.get('amnt', 1)
 	def addAction(self, **kwargs):
+		if kwargs.get('amnt', 1)==0: return
 		self.game.dp.send(signal='addAction', player=self, amnt=kwargs.get('amnt', 1))
 		self.actions += kwargs.get('amnt', 1)
 	def addVictory(self, **kwargs):
+		if kwargs.get('amnt', 1)==0: return
 		self.game.dp.send(signal='addVictory', player=self, amnt=kwargs.get('amnt', 1))
 		self.victories += kwargs.get('amnt', 1)
 	
@@ -533,6 +545,7 @@ class Event(object):
 	def __init__(self, game, **kwargs):
 		self.price = kwargs.get('price', 0)
 		self.potionPrice = kwargs.get('potionPrice', 0)
+		self.game = game
 	def onBuy(self, player, **kwargs):
 		pass
 	def checkBefore(self, player, **kwargs):
@@ -552,10 +565,16 @@ class Treasure(Card):
 	def __init__(self, game, **kwargs):
 		super(Treasure, self).__init__(game, **kwargs)
 		self.value = 1
+		self.potionValue = 0
 		self.types.append('TREASURE')
+	def getValue(self, player, **kwargs):
+		return self.value
+	def getPotionValue(self, player, **kwargs):
+		return self.potionValue
 	def onPlay(self, player, **kwargs):
 		super(Treasure, self).onPlay(player, **kwargs)
 		player.addCoin(amnt=self.value)
+		player.addPotion(amnt=self.potionValue)
 	def getValue(self, **kwargs):
 		return np.max((self.value, 0))
 		
@@ -659,7 +678,7 @@ class Traveler(CardAdd):
 		self.types.append('TRAVELER')
 		self.morph = None
 	def onDestroy(self, player, **kwargs):
-		if not (player.game.NSPiles[self.morph.name].viewTop() and player.user(('no', 'yes'), 'Upgrade '+self.name)): return
+		if not (player.game.NSPiles[self.morph.name].viewTop() and player.user(('no', 'yes'), 'Exchange '+self.name+' for '+self.morph.name)): return
 		for i in range(len(player.inPlay)):
 			if player.inPlay[i]==self:
 				player.returnCard(player.inPlay.pop(i))
