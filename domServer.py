@@ -97,20 +97,20 @@ class OnlinePlayer(server.CST):
 	def command(self, ind):
 		print(ind)
 		if not len(ind)==4: return
-		#if ind.decode('UTF-8')=='answ':
-		#	self.player.answerF(struct.unpack('I', self.recvLen(4))[0])
-		if ind.decode('UTF-8')=='game':
+		try: streng = ind.decode('UTF-8')
+		except: streng = None
+		if streng=='game':
 			self.makeGame()
-		elif ind.decode('UTF-8')=='test':
+		elif streng=='test':
 			self.makeGame(True)
-		elif ind.decode('UTF-8')=='requ':
+		elif streng=='requ':
 			self.channelOutFunc(self.request(self.recvLen(4).decode('UTF-8')), 'resp', False)
-		elif ind.decode('UTF-8')=='reco':
+		elif streng=='reco':
 			print(self.oaddr, playerConnections)
 			if not self.oaddr in list(playerConnections): return
 			self.linkPlayer(playerConnections[self.oaddr])
 			if self.player.payload: self.sendPayload('ques', self.player.payload)
-		elif ind.decode('UTF-8')=='conc':
+		elif streng=='conc':
 			self.player.game.concede(self.player)
 		elif self.player: 
 			self.player.answerF(struct.unpack('I', ind)[0])
@@ -123,11 +123,6 @@ class OnlinePlayer(server.CST):
 		else: return len(options)-1
 	
 if __name__=='__main__':
-	#dp.connect(tdominion.logFunc)
-	#makePiles(baseSet)
-	#makePiles(prosperity)
-	#makePiles(platColony)
-	#makePiles(seaside)
 	HOST = str(socket.gethostbyname(socket.gethostname()))
 	print(HOST)
 	PORT = 6700

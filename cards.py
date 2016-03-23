@@ -2178,13 +2178,13 @@ class RoyaleCarriage(Action, Reserve, CardAdd):
 	def call(self, signal, **kwargs):
 		super(RoyaleCarriage, self).call(signal, **kwargs)
 		self.links.append(kwargs['card'])
-		player.game.dp.connect(self.trigger, signal='destroy')
-		player.playAction(kwargs['card'])
+		self.owner.game.dp.connect(self.destroyTrigger, signal='destroy')
+		self.owner.playAction(kwargs['card'])
 	def onDestroy(self, player, **kwargs):
 		if self.links: return True
 	def onLeavePlay(self, player, **kwargs):
-		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
-	def trigger(self, signal, **kwargs):
+		if self.links: player.game.dp.disconnect(self.destroyTrigger, signal='destroy')
+	def destroyTrigger(self, signal, **kwargs):
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
 		if self.links: return
@@ -2591,11 +2591,11 @@ class Duchess(Action, CardAdd):
 			if not card: continue
 			aplayer.reveal(card, hidden=aplayer)
 			if aplayer.user(('discard', 'top'), 'Choose position'): aplayer.library.append(card)
-			else: aplayer.discard(card)
+			else: aplayer.discardCard(card)
 	def trigger(self, signal, **kwargs):
 		if kwargs['card'].name=='Duchy' and not kwargs['player'].user(('yes', 'no'), 'Choose gain Duchess'): kwargs['player'].gainFromPile(kwargs['player'].game.piles['Duchess'])
-	def onCreate(self, pile, game, **kwargs):
-		super(Duchess, self).onCreate(pile, game, **kwargs)
+	def onPileCreate(self, pile, game, **kwargs):
+		super(Duchess, self).onPileCreate(pile, game, **kwargs)
 		game.dp.connect(self.trigger, signal='gain')
 
 class FoolsGold(Treasure, Reaction, CardAdd):
@@ -2632,4 +2632,62 @@ class FoolsGold(Treasure, Reaction, CardAdd):
 	def onReturn(self, player, **kwargs):
 		self.disconnect(player=player)
 		
-hinterlands = [Crossroads, Duchess, FoolsGold]
+class Develop(Action, CardAdd):
+	name = 'Develop'
+	def __init__(self, game, **kwargs):
+		super(Develop, self).__init__(game, **kwargs)
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Develop, self).onPlay(player, **kwargs)
+		if not player.hand: return
+		choice = player.user([o.name for o in player.hand], 'Choose trash')
+		coinVal, potionVal = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player)
+		player.trash(choice)
+		if player.user(('Low first', 'High first'), 'Choose gain order'):
+			self.gain(player, coinVal+1, potionVal)
+			self.gain(player, coinVal-1, potionVal)
+		else:
+			self.gain(player, coinVal-1, potionVal)
+			self.gain(player, coinVal+1, potionVal)
+	def gain(self, player, cv, pv, **kwargs):
+		options = []
+		for pile in player.game.piles:
+			if player.game.piles[pile].viewTop() and player.game.piles[pile].maskot.getPrice(player)==cv and player.game.piles[pile].maskot.getPotionPrice(player)==pv: options.append(pile)
+		if not options: return
+		choice = player.user(options, 'Choose gain')
+		player.gainFromPile(player.game.piles[options[choice]], to=player.library)
+
+class Oasis(Action, CardAdd):
+	name = 'Oasis'
+	def __init__(self, game, **kwargs):
+		super(Oasis, self).__init__(game, **kwargs)
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Oasis, self).onPlay(player, **kwargs)
+		player.draw()
+		player.addAction()
+		player.addCoin()
+		if not player.hand: return
+		player.discard(player.user([o.name for o in player.hand], 'Choose discard'))
+
+class Oracle(Action, Attack, CardAdd):
+	name = 'Oracle'
+	def __init__(self, game, **kwargs):
+		super(Oracle, self).__init__(game, **kwargs)
+		Attack.__init__(self, game, **kwargs)
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Oracle, self).onPlay(player, **kwargs)
+		for aplayer in player.game.getPlayers(player):
+			aplayer.attack(self.attack, self, controller=player)
+		player.draw(amnt=2)
+	def attack(self, player, **kwargs):
+		cards = player.getCards(2)
+		if not cards: return
+		for card in cards: player.reveal(card)
+		if kwargs['controller'].user(('Top', 'Discard'), 'Choose card location'):
+			while cards: player.discardCard(cards.pop())
+		else:
+			while cards: player.library.append(cards.pop(player.user([o.name for o in cards], 'Choose top order')))
+	
+hinterlands = [Crossroads, Duchess, FoolsGold, Develop, Oasis, Oracle]

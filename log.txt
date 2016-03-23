@@ -537,3 +537,28 @@ COMMAND, conn, True
 COMMAND, game, False
 COMMAND, conc, False
 COMMAND, game, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, game, False
+COMMAND, conc, False
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+COMMAND, , False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+COMMAND, , False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False

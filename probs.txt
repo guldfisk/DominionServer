@@ -9,24 +9,6 @@ boontokens fra multiple players
 something med treasurys
 fucking disciple throne room arcane shit
 8 disciples??
-royal carriage trigger aldrif
-Traceback (most recent call last):
-  File "C:\Python33\lib\threading.py", line 901, in _bootstrap_inner
-    self.run()
-  File "domServer.py", line 16, in run
-    self.f(**self.vals)
-  File "C:\Projeter\farligfarligslange\dominionxd\DominionServer\dombase.py", line 100, in start
-    player.takeTurn()
-  File "C:\Projeter\farligfarligslange\dominionxd\DominionServer\dombase.py", line 250, in takeTurn
-    self.actionPhase()
-  File "C:\Projeter\farligfarligslange\dominionxd\DominionServer\dombase.py", line 259, in actionPhase
-    choice = self.user([o.name for o in self.hand]+['EndActionPhase'], 'Choose action')
-  File "C:\Projeter\farligfarligslange\dominionxd\DominionServer\dombase.py", line 259, in <listcomp>
-    choice = self.user([o.name for o in self.hand]+['EndActionPhase'], 'Choose action')
-AttributeError: 'NoneType' object has no attribute 'name'
-
-^WTF?
-duchess trigger ikke
 multi vindue ting breaker input
 
 ------------------------------------------------------------------------------------
