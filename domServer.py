@@ -30,14 +30,21 @@ class PPlayer(Player):
 		self.userAddress = None
 	def use(self, options, name='noName'):
 		for player in self.game.players: player.updateUI()
+		if len(options)==1 or not self.game.running: return 0
 		self.payload = pickle.dumps((name, options))
 		self.oplayer.sendPayload('ques', self.payload)
 		self.useLock.acquire()
 		self.payload = None
-		if self.answer in range(len(options)): return self.answer
+		if type(self.answer)==int and self.answer in range(len(options)): return self.answer
 		else: return len(options)-1
 	def answerF(self, answer):
 		self.answer = answer
+		self.useLock.release()
+	def gameEnd(self, **kwargs):
+		super(PPlayer, self).gameEnd(**kwargs)
+		del playerConnections[self.oplayer.oaddr]
+		self.oplayer.player = None
+		self.answer = None
 		self.useLock.release()
 			
 class OnlinePlayer(server.CST):
@@ -90,9 +97,9 @@ class OnlinePlayer(server.CST):
 	def command(self, ind):
 		print(ind)
 		if not len(ind)==4: return
-		if ind.decode('UTF-8')=='answ':
-			self.player.answerF(struct.unpack('I', self.recvLen(4))[0])
-		elif ind.decode('UTF-8')=='game':
+		#if ind.decode('UTF-8')=='answ':
+		#	self.player.answerF(struct.unpack('I', self.recvLen(4))[0])
+		if ind.decode('UTF-8')=='game':
 			self.makeGame()
 		elif ind.decode('UTF-8')=='test':
 			self.makeGame(True)
@@ -103,6 +110,10 @@ class OnlinePlayer(server.CST):
 			if not self.oaddr in list(playerConnections): return
 			self.linkPlayer(playerConnections[self.oaddr])
 			if self.player.payload: self.sendPayload('ques', self.player.payload)
+		elif ind.decode('UTF-8')=='conc':
+			self.player.game.concede(self.player)
+		elif self.player: 
+			self.player.answerF(struct.unpack('I', ind)[0])
 	def use(self, options, name='noName'):
 		payload = pickle.dumps((name, options))
 		self.send('ques'.encode('UTF-8')+struct.pack('I', len(payload))+payload)

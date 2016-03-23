@@ -121,17 +121,15 @@ class NetInput(ScrollWithInput):
 			HOST = re.match('host ?(.+)', string, re.IGNORECASE).groups()[0]
 			updateNetstat()
 		elif string=='conn':
-			log('Connecting')
 			global s
-			
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			s.connect((HOST, PORT))
-			log('CONNECTED', str(s))
 			l = traa(lyt)
 			l.start()
-			#ts = traa(tilServer)
-			#ts.start()
 			updateNetstat()
+		elif string=='conc':
+			ipbuf.add('')
+			s.send(string.encode('UTF-8'))
 		elif s: s.send(string.encode('UTF-8'))
 
 class GameInput(ScrollWithInput):
@@ -256,7 +254,8 @@ def updt(signal, **kwargs):
 	logw.addstr('')
 	
 def answer(**kwargs):
-	s.send('answ'.encode('UTF-8')+struct.pack('I', testUser(kwargs['options'], kwargs['name'])))
+	#s.send('answ'.encode('UTF-8')+struct.pack('I', testUser(kwargs['options'], kwargs['name'])))
+	s.send(struct.pack('I', testUser(kwargs['options'], kwargs['name'])))
 	
 def recvLen(s, l=4):
 	#return s.recv(l)

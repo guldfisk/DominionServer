@@ -2599,7 +2599,7 @@ class Duchess(Action, CardAdd):
 		game.dp.connect(self.trigger, signal='gain')
 
 class FoolsGold(Treasure, Reaction, CardAdd):
-	name = "Fool's GOld"
+	name = "Fool's Gold"
 	def __init__(self, game, **kwargs):
 		super(FoolsGold, self).__init__(game, **kwargs)
 		Reaction.__init__(self, game, **kwargs)

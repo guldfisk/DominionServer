@@ -61,7 +61,9 @@ class Game(object):
 		self.events = []
 		self.turnFlag = ''
 		self.round = 0
+		self.conceded = []
 		self.dp = dp.Dispatcher()
+		self.running = False
 	def pilesView(self, player):
 		ud = ''
 		for key in sorted(self.piles): ud+=key+' '+str(self.piles[key].maskot.getPrice(player))+'$: '+str(len(self.piles[key]))+', '
@@ -88,6 +90,7 @@ class Game(object):
 			action = self.delayedActions.pop()
 			action[0](**action[1])
 	def start(self, endCon=None):
+		self.running = True
 		if not endCon: endCondition = self.checkGameEnd
 		else: endCondition = endCon
 		self.round = 0
@@ -96,7 +99,7 @@ class Game(object):
 		self.dp.send(signal='globalSetup', players=self.players)
 		self.emptyDelayed()
 		for player in self.players: player.setup(self)
-		while True:
+		while self.running:
 			self.round+=1
 			self.dp.send(signal='beginRound', round=self.round)
 			for player in self.players:
@@ -105,13 +108,21 @@ class Game(object):
 					self.endGame()
 					return
 				self.emptyDelayed()
+	def concede(self, player, **kwargs):
+		self.conceded.append(player)
+		self.endGame()
 	def endGame(self):
 		self.dp.send(signal='gameEnding')
 		for player in self.players: player.endGame()
 		self.players.sort(key=lambda x: x.victories, reverse=True)
 		points = {}
 		for player in self.players: points[player.name] = player.victories
-		self.dp.send(signal='gameEnd', winner=self.players[0], points=points)
+		winners=[item for item in self.players if not item in self.conceded]
+		if not winners: winner = self.players[0]
+		else: winner = winners[0]
+		self.dp.send(signal='gameEnd', winner=winner, points=points)
+		for player in self.players: player.gameEnd()
+		self.running = False
 	def getNextPlayer(self, cplayer):
 		if not cplayer in self.players: return
 		if not len(self.players)>1: return cplayer
@@ -259,7 +270,10 @@ class Player(object):
 		while True:
 			self.channelOut(self.request('stat'), 'resp', False)
 			if self.actions<1 or not self.hand: break
-			choice = self.user([o.name for o in self.hand]+['EndActionPhase'], 'Choose action')
+			try: choice = self.user([o.name for o in self.hand]+['EndActionPhase'], 'Choose action')
+			except AttributeError:
+				print(self.hand)
+				raise AttributeError
 			if choice+1>len(self.hand): break
 			print(self.hand[choice].types)
 			if not 'ACTION' in self.hand[choice].types: continue
@@ -326,7 +340,7 @@ class Player(object):
 		cards = []
 		for i in range(amnt):
 			drawnCard = self.getCard()
-			if drawnCard=='Empty': break
+			if not drawnCard: break
 			cards.append(drawnCard)
 		return cards
 	def draw(self, **kwargs):
@@ -336,7 +350,7 @@ class Player(object):
 			self.minusDraw = False
 		for i in range(amn):
 			drawnCard = self.getCard()
-			if drawnCard=='Empty': return drawnCard
+			if not drawnCard: return 'Empty'
 			self.game.dp.send(signal='draw', player=self, card=drawnCard, hidden=self)
 			self.hand.append(drawnCard)
 	def reshuffle(self, **kwargs):
@@ -397,6 +411,8 @@ class Player(object):
 		self.reshuffle()
 		for card in self.library:
 			card.onGameEnd(self)
+	def gameEnd(self, **kwargs):
+		self.game = None
 	def give(self, card, **kwargs):
 		self.discardPile.append(card)
 		card.owner = self
