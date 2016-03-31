@@ -191,7 +191,7 @@ class Bureaucrat(Action, Attack, CardAdd):
 		self.price = 4
 	def onPlay(self, player, **kwargs):
 		super(Bureaucrat, self).onPlay(player, **kwargs)
-		player.gain(player.game.piles['Silver'].gain(), to=player.library, fromz=player.game.piles['Silver'].gain())
+		player.gainFromPile(player.game.piles['Silver'], to=player.library)
 		for aplayer in player.game.getPlayers(player):
 			if aplayer==player: continue
 			aplayer.attack(self.attack, self)
@@ -342,7 +342,7 @@ class Thief(Action, Attack, CardAdd):
 		for card in copy.copy(cards):
 			if card==options[choice]:
 				player.trashCard(card)
-				if gain: kwargs['controller'].gain(trash.pop())
+				if gain: kwargs['controller'].gain(card, player.game.trash)
 			else: player.discardCard(card)
 			
 class ThroneRoom(Action, CardAdd):
@@ -372,12 +372,13 @@ class ThroneRoom(Action, CardAdd):
 	def onLeavePlay(self, player, **kwargs):
 		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
 	def trigger(self, signal, **kwargs):
+		if kwargs['card']==self: return
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
 		if self.links: return
 		for i in range(len(self.owner.inPlay)):
 			if self.owner.inPlay[i]==self:
-				self.owner.destroyCard(self.owner.inPlay.pop(i))
+				self.owner.destroy(i)
 				break
 		
 class CouncilRoom(Action, CardAdd):
@@ -421,7 +422,7 @@ class Library(Action, CardAdd):
 	def onPlay(self, player, **kwargs):
 		super(Library, self).onPlay(player, **kwargs)
 		aside = []
-		while len(player.hand)<8 and not player.draw()=='Empty':
+		while len(player.hand)<8 and player.draw():
 			if 'ACTION' in player.hand[-1].types and not player.user((player.hand[-1].name, 'NotSetAside'), ''):
 				actionCard = player.hand.pop()
 				player.reveal(actionCard)
@@ -512,7 +513,7 @@ class Loan(Treasure, CardAdd):
 		treasure = None
 		while True:
 			card = player.getCard()
-			if card=='Empty': break
+			if not card: break
 			player.reveal(card)
 			if 'TREASURE' in card.types:
 				treasure = card
@@ -564,7 +565,7 @@ class Watchtower(Action, Reaction, CardAdd):
 		self.signal = 'gain'
 	def onPlay(self, player, **kwargs):
 		super(Watchtower, self).onPlay(player, **kwargs)
-		while len(player.hand)<6 and not player.draw()=='Empty': pass
+		while len(player.hand)<6 and player.draw(): pass
 	def trigger(self, signal, **kwargs):
 		if kwargs['player']==self.owner and self in self.owner.hand and self.owner.user(('no', 'UseWatchTower'), ''):
 			self.owner.reveal(self)
@@ -714,7 +715,7 @@ class Mint(Action, CardAdd):
 		super(Mint, self).onPlay(player, **kwargs)
 		options = []
 		for card in player.hand:
-			if 'TREASURE' in card.types: optins.append(card.name)
+			if 'TREASURE' in card.types: options.append(card.name)
 		if not options: return
 		choice = player.user(options+['NoMint'], 'Choose gain')
 		if choice>=len(options): return
@@ -794,7 +795,7 @@ class Venture(Treasure, CardAdd):
 		treasure = None
 		while True:
 			card = player.getCard()
-			if card=='Empty': break
+			if not card: break
 			player.reveal(card)
 			if 'TREASURE' in card.types:
 				treasure = card
@@ -947,12 +948,14 @@ class KingsCourt(Action, CardAdd):
 	def onLeavePlay(self, player, **kwargs):
 		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
 	def trigger(self, signal, **kwargs):
+		if kwargs['card']==self: return
+		if kwargs['card']==self: return
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
 		if self.links: return
 		for i in range(len(self.owner.inPlay)):
 			if self.owner.inPlay[i]==self:
-				self.owner.destroyCard(self.owner.inPlay.pop(i))
+				self.owner.destroy(i)
 				break
 
 class Peddler(Action, CardAdd):
@@ -1695,12 +1698,13 @@ class Disciple(Action, Traveler, CardAdd):
 	def onLeavePlay(self, player, **kwargs):
 		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
 	def trigger(self, signal, **kwargs):
+		if kwargs['card']==self: return
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
 		if self.links: return
 		for i in range(len(self.owner.inPlay)):
 			if self.owner.inPlay[i]==self:
-				self.owner.destroyCard(self.owner.inPlay.pop(i))
+				self.owner.destroy(i)
 				break
 	def onPileCreate(self, pile, game, **kwargs):
 		game.require(self.morph)
@@ -2185,12 +2189,13 @@ class RoyaleCarriage(Action, Reserve, CardAdd):
 	def onLeavePlay(self, player, **kwargs):
 		if self.links: player.game.dp.disconnect(self.destroyTrigger, signal='destroy')
 	def destroyTrigger(self, signal, **kwargs):
+		if kwargs['card']==self: return
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
 		if self.links: return
 		for i in range(len(self.owner.inPlay)):
 			if self.owner.inPlay[i]==self:
-				self.owner.destroyCard(self.owner.inPlay.pop(i))
+				self.owner.destroy(i)
 				break
 				
 class Storyteller(Action, CardAdd):
@@ -2513,17 +2518,17 @@ class Golemn(Action, CardAdd):
 		super(Golemn, self).onPileCreate(pile, game, **kwargs)
 		game.requirePile(Potion)
 			
-class Possesion(Action, CardAdd):
-	name = 'Possesion'
+class Possession(Action, CardAdd):
+	name = 'Possession'
 	def __init__(self, game, **kwargs):
-		super(Possesion, self).__init__(game, **kwargs)
+		super(Possession, self).__init__(game, **kwargs)
 		self.price = 6
 		self.potionPrice = 1
 		self.possesed = None
 		self.posseser = None
 		self.trashed = []
 	def onPlay(self, player, **kwargs):
-		super(Possesion, self).onPlay(player, **kwargs)
+		super(Possession, self).onPlay(player, **kwargs)
 		player.game.delayedActions.append((self.possesionTurn, {'player': player.game.getNextPlayer(player), 'posseser': player}))
 	def trashTrigger(self, signal, **kwargs):
 		if kwargs['player']==self.possesed:
@@ -2531,7 +2536,7 @@ class Possesion(Action, CardAdd):
 			return True
 	def gainTrigger(self, signal, **kwargs):
 		if kwargs['player']==self.possesed:
-			self.posseser.gain(kwargs['card'])
+			self.posseser.gain(kwargs['card'], kwargs['source'])
 			return True
 	def possesionTurn(self, **kwargs):
 		self.possesed = kwargs['player']
@@ -2541,7 +2546,7 @@ class Possesion(Action, CardAdd):
 		self.owner.game.dp.connect(self.gainTrigger, signal='gain')
 		self.owner.game.dp.connect(self.trashTrigger, signal='trash')
 		self.possesed.game.activePlayer = self.possesed
-		self.possesed.game.turnFlag = 'possesion'
+		self.possesed.game.turnFlag = 'possession'
 		self.possesed.resetValues()
 		self.possesed.game.dp.send(signal='startTurn', player=self.possesed, flags=self.owner.game.turnFlag)
 		self.possesed.actionPhase()
@@ -2553,10 +2558,10 @@ class Possesion(Action, CardAdd):
 		self.owner.game.dp.disconnect(self.trashTrigger, signal='trash')
 		self.owner.game.dp.disconnect(self.gainTrigger, signal='gain')
 	def onPileCreate(self, pile, game, **kwargs):
-		super(Possesion, self).onPileCreate(pile, game, **kwargs)
+		super(Possession, self).onPileCreate(pile, game, **kwargs)
 		game.requirePile(Potion)
 	
-alchemy = [Herbalist, Apprentice, Transmute, Vineyard, Apothecary, ScryingPool, University, Alchemist, Familiar, PhilosophersStone, Golemn, Possesion]
+alchemy = [Herbalist, Apprentice, Transmute, Vineyard, Apothecary, ScryingPool, University, Alchemist, Familiar, PhilosophersStone, Golemn, Possession]
 
 class Crossroads(Action, CardAdd):
 	name = 'Crossroads'
@@ -2689,5 +2694,207 @@ class Oracle(Action, Attack, CardAdd):
 			while cards: player.discardCard(cards.pop())
 		else:
 			while cards: player.library.append(cards.pop(player.user([o.name for o in cards], 'Choose top order')))
-	
-hinterlands = [Crossroads, Duchess, FoolsGold, Develop, Oasis, Oracle]
+
+class Scheme(Action, CardAdd):
+	name = 'Scheme'
+	def __init__(self, game, **kwargs):
+		super(Scheme, self).__init__(game, **kwargs)
+		self.price = 3
+		self.scheming = []
+		self.nexts = []
+	def onPlay(self, player, **kwargs):
+		super(Scheme, self).onPlay(player, **kwargs)
+		player.draw()
+		player.addAction()
+		self.nexts.append(self.next)
+		player.game.dp.connect(self.endTurnTrigger, signal='endTurn')
+		player.game.dp.connect(self.destroyTrigger, signal='destroy')
+		player.game.dp.connect(self.turnEndedTrigger, signal='turnEnded')
+	def endTurnTrigger(self, signal, **kwargs):
+		if not kwargs['player']==self.owner: return
+		while self.nexts: self.nexts.pop()()
+	def next(self, **kwargs):
+		options = []
+		for card in self.owner.inPlay:
+			if 'ACTION' in card.types and not (hasattr(card, 'schemed') and card.schemed): options.append(card)			
+		if not options: return
+		choice = self.owner.user([o.name for o in options]+['No Scheme'], 'Choose scheme')
+		if choice+1>len(options): return
+		options[choice].schemed = True
+		self.scheming.append(options[choice])
+	def destroyTrigger(self, signal, **kwargs):
+		if not kwargs['card'] in self.scheming: return
+		for i in range(len(self.owner.inPlay)):
+			print(self.owner.inPlay[i])
+			if self.owner.inPlay[i]==kwargs['card']:
+				self.owner.inPlay[i].onLeavePlay(self.owner)
+				self.owner.library.append(self.owner.inPlay.pop(i))
+				return True
+	def turnEndedTrigger(self, signal, **kwargs):
+		for scheme in self.scheming: scheme.schemed = False
+		self.scheming[:] = []
+		self.owner.game.dp.disconnect(self.endTurnTrigger, signal='endTurn')
+		self.owner.game.dp.disconnect(self.destroyTrigger, signal='destroy')
+		self.owner.game.dp.disconnect(self.turnEndedTrigger, signal='turnEnded')
+			
+class Tunnel(Victory, Reaction, CardAdd):
+	name = 'Tunnel'
+	def __init__(self, game, **kwargs):
+		super(Tunnel, self).__init__(game, **kwargs)
+		Reaction.__init__(self, game, **kwargs)
+		self.price = 3
+		self.value = 2
+		self.signal = 'discard'
+	def trigger(self, signal, **kwargs):
+		if kwargs['card']==self and self.owner.user(('no', 'yes'), 'Reveal Tunnel'):
+			self.owner.reveal(self)
+			self.owner.gainFromPile(self.owner.game.piles['Gold'])
+	def onGain(self, player, **kwargs):
+		self.connect(player=player)
+	def onTrash(self, player, **kwargs):
+		self.disconnect(player=player)
+	def onReturn(self, player, **kwargs):
+		self.disconnect(player=player)
+		
+class JackOfAllTrades(Action, CardAdd):
+	name = 'Jack of all Trades'
+	def __init__(self, game, **kwargs):
+		super(JackOfAllTrades, self).__init__(game, **kwargs)
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(JackOfAllTrades, self).onPlay(player, **kwargs)
+		player.gainFromPile(player.game.piles['Silver'])
+		card = player.getCard()
+		if card:
+			player.reveal(card, hidden=player)
+			if player.user(('discard', 'top'), 'Choose location'): player.library.append(card)
+			else: player.discardCard(card)
+		while len(player.hand)<6 and player.draw(): pass
+		options = []
+		for card in player.hand:
+			if not 'TREASURE' in card.types: options.append(card)
+		if not options: return
+		choice = player.user([o.name for o in options]+['No trash'], 'Choose trash')
+		if choice+1>len(options): return
+		for i in range(len(player.hand)):
+			if player.hand[i]==options[choice]:
+				player.trash(i)
+				return
+		
+class NobleBrigand(Action, Attack, CardAdd):
+	name = 'Noble Brigand'
+	def __init__(self, game, **kwargs):
+		super(NobleBrigand, self).__init__(game, **kwargs)
+		Attack.__init__(self, game, **kwargs)
+		self.price = 4
+		game.dp.connect(self.trigger, signal='buy')
+	def onPlay(self, player, **kwargs):
+		super(NobleBrigand, self).onPlay(player, **kwargs)
+		player.addCoin()
+		self.attackOpponents(players)
+	def attackOpponents(self, player, **kwargs):
+		for aplayer in player.game.getPlayers(player):
+			if not aplayer==player: aplayer.attack(self.attack, self)
+	def attack(self, player, **kwargs):
+		cards = player.getCards(2)
+		if not cards: return
+		if not any('TEASURE' in o.types for o in cards):
+			player.gainFromPile(player.game.piles['Copper'])
+			return
+		options = []
+		for card in cards:
+			if card.name in ('Gold', 'Silver'): options.append(card)
+		if not options: return
+		choice = self.owner.user([o.name for o in options], 'Choose steal')
+		trashedCard = options.pop(choice)
+		player.trashCard(trashedCard)
+		self.owner.gain(trashedCard, player.game.trash)
+		while cards: player.discardCard(card.pop())
+	def trigger(self, signal, **kwargs):
+		if 'pile' in kwargs and not self==kwargs['pile'].viewTop(): return
+		self.attackOpponents(kwargs['player'])
+		
+class NomadCamp(Action, CardAdd):
+	name = 'Nomad Camp'
+	def __init__(self, game, **kwargs):
+		super(NomadCamp, self).__init__(game, **kwargs)
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(NomadCamp, self).onPlay(player, **kwargs)
+		player.addCoin(amnt=2)
+		player.addBuy()
+	def onGain(self, player, **kwargs):
+		for i in range(len(player.discardPile)-1, -1, -1):
+			if player.discardPile[i]==self:
+				player.library.append(player.discardPile.pop(i))
+				break
+
+class SilkRoad(Victory, CardAdd):
+	name = 'Silk Road'
+	def __init__(self, game, **kwargs):
+		super(SilkRoad, self).__init__(game, **kwargs)
+		self.price = 4
+	def onGameEnd(self, player, **kwargs):
+		victories = 0
+		for card in player.library:
+			if 'VICTORY' in card.types: victories += 1
+		player.addVictory(amnt=m.floor(victories/4))
+
+class SpiceMerchant(Action, CardAdd):
+	name = 'SpiceMerchant'
+	def __init__(self, game, **kwargs):
+		super(SpiceMerchant, self).__init__(game, **kwargs)
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(SpiceMerchant, self).onPlay(player, **kwargs)
+		options = []
+		for card in player.hand:
+			if 'TREASURE' in card.types: options.append(card)
+		if not options: return
+		choice = player.user([o.name for o in options]+['No trash'], 'Choose trash')
+		if choise+1>len(options): return
+		for i in range(len(player.hand)):
+			if player.hand[i]==options[choice]: player.trash(i)
+		if player.user(('coins and buy', 'cards and action'), 'Choose benefit'):
+			player.draw(amnt=2)
+			player.addAction()
+		else:
+			player.addCoin(amnt=2)
+			player.addBuy()
+		
+class Trader(Action, Reaction, CardAdd):
+	name = 'Trader'
+	def __init__(self, game, **kwargs):
+		super(Trader, self).__init__(game, **kwargs)
+		Reaction.__init__(self, game, **kwargs)
+		self.price = 4
+		self.signal = 'tryGain'
+	def onPlay(self, player, **kwargs):
+		super(Trader, self).onPlay(player, **kwargs)
+		if not player.hand: return
+		choice = player.user([o.name for o in player.hand], 'Choose trash')
+		coinVal = player.hand[choice].getPrice(player)
+		player.trash(choice)
+		for i in range(coinVal): player.gainFromPile(player.game.piles['Silver'])
+	def trigger(self, signal, **kwargs):
+		if kwargs['player']==self.owner and not kwargs['card'].name=='Silver' and self in self.owner.hand and self.owner.user(('no', 'yes'), 'Use Trader'):
+			self.owner.reveal(self)
+			self.owner.gainFromPile(self.owner.game.piles['Silver'])
+			return True
+	def onGain(self, player, **kwargs):
+		self.connect(game=player.game)
+	def onTrash(self, player, **kwargs):
+		self.disconnect(game=player.game)
+	def onReturn(self, player, **kwargs):
+		self.disconnect(game=player.game)
+		
+class Cache(Treasure, CardAdd):
+	name = 'Cache'
+	def __init__(self, game, **kwargs):
+		super(Cache, self).__init__(game, **kwargs)
+		self.value = 3
+		self.price = 5
+	def onPileCreate(self, player, **kwargs):
+		for i in range(2): player.gainFromPile(player.game.piles['Copper'])
+		
+hinterlands = [Crossroads, Duchess, FoolsGold, Develop, Oasis, Oracle, Scheme, Tunnel, JackOfAllTrades, NobleBrigand, NomadCamp, SilkRoad, SpiceMerchant, Trader, Cache]

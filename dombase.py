@@ -19,6 +19,9 @@ class CPile(list):
 	def getView(self):
 		if self.faceup: return self.getFullView()
 		else: return str(len(self))+' cards'
+	def index(self, element):
+		if not element in self: return None
+		return super(CPile, self).index(element)
 	def popx(self, pos=None):
 		if self:
 			if not pos==None: return self.pop(pos)
@@ -172,7 +175,7 @@ class Game(object):
 		for player in self.players:
 			for i in range(7): player.gainFromPile(self.piles['Copper'])
 			for i in range(3): player.gainFromPile(self.piles['Estate'])
-			#for i in range(1): player.gainFromPile(self.piles['Possesion'])
+			#for i in range(3): player.gainFromPile(self.piles['Copper'])
 			for card in player.discardPile: self.allCards.append(card)
 	
 class Player(object):
@@ -236,7 +239,7 @@ class Player(object):
 		self.uiupdate('oppo', 'mats', oppoV[3])
 	def toPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
-		if signal=='tryBuy' or signal=='tryBuyEvent': return
+		if signal=='tryBuy' or signal=='tryBuyEvent' or signal=='tryGain': return
 		s = [signal, {}]
 		hidden = False
 		censored = ['card']
@@ -315,10 +318,10 @@ class Player(object):
 		else:
 			self.inPlay[position].onLeavePlay(self)
 			return self.inPlay.pop(position)
-	def destroyCard(self, card, **kwargs):
-		if not card.onDestroy(self) and not self.game.dp.send(signal='destroy', player=self, card=card):
-			card.onLeavePlay(self)
-			self.discardPile.append(card)
+	def destroy(self, position, **kwargs):
+		if not self.inPlay[position].onDestroy(self) and not self.game.dp.send(signal='destroy', player=self, card=self.inPlay[position]):
+			self.inPlay[position].onLeavePlay(self)
+			self.discardPile.append(self.inPlay[position])
 	def destroyAll(self, **kwargs):
 		print('STARTDESTROYALL', [o.name for o in self.inPlay], self.inPlay)
 		cards = []
@@ -350,9 +353,10 @@ class Player(object):
 			self.minusDraw = False
 		for i in range(amn):
 			drawnCard = self.getCard()
-			if not drawnCard: return 'Empty'
+			if not drawnCard: return
 			self.game.dp.send(signal='draw', player=self, card=drawnCard, hidden=self)
 			self.hand.append(drawnCard)
+		return True
 	def reshuffle(self, **kwargs):
 		self.game.dp.send(signal='shuffle', player=self)
 		while self.discardPile:
@@ -421,12 +425,16 @@ class Player(object):
 		card.owner = self
 		card.onGain(self)
 		kwargs.get('to', self.discardPile).append(card)
-	def gain(self, card, **kwargs):
-		if card and not card.onGain(self) and not self.game.dp.send(signal='gain', player=self, card=card, fromz=kwargs.get('fromz', None), kwargs=kwargs):
-			card.owner = self
-			kwargs.get('to', self.discardPile).append(card)
+	def gain(self, card, source, **kwargs):
+		if source.index(card)==None: return
+		if not self.game.dp.send(signal='tryGain', player=self, card=card, source=source, kwargs=kwargs) and card and not card.onGain(self) and not self.game.dp.send(signal='gain', player=self, card=card, source=source, kwargs=kwargs):
+			index = source.index(card)
+			if index==None: return
+			cardGained = source.pop(index)
+			cardGained.owner = self
+			kwargs.get('to', self.discardPile).append(cardGained)
 	def gainFromPile(self, pile, **kwargs):
-		self.gain(pile.gain(), fromz=pile, **kwargs)
+		self.gain(pile.viewTop(), pile, fromz=pile, **kwargs)
 	def takeFromPile(self, pile, **kwargs):
 		self.take(pile.gain(), fromz=pile, **kwargs)
 	def buy(self, pile, **kwargs):
@@ -435,7 +443,7 @@ class Player(object):
 			self.buys -= 1
 			self.coins -= pile[-1].getPrice(self)
 			self.potions -= pile[-1].getPotionPrice(self)
-			self.gain(pile.gain(), fromz=pile)
+			self.gainFromPile(pile)
 	def buyEvent(self, event, **kwargs):
 		if self.buys>0 and event.getPrice(self)<=self.coins and event.getPotionPrice(self)<=self.potions and not self.game.dp.send(signal='tryBuyEvent', player=self, event=event):
 			self.game.dp.send(signal='buyEvent', player=self, event=event)

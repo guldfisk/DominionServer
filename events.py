@@ -370,7 +370,7 @@ class Pathfinding(Event):
 	name = 'Pathfinding'
 	def __init__(self, game, **kwargs):
 		super(Pathfinding, self).__init__(game, **kwargs)
-		self.price = 6
+		self.price = 8
 		game.addToken(PlusCard)
 	def onBuy(self, player, **kwargs):		
 		options = []
