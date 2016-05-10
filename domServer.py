@@ -90,7 +90,7 @@ class OnlinePlayer(server.CST):
 			game.makeEvents(allEvents)
 		else:
 			game.makeEvents(random.sample(allEvents, random.randint(0, 2)))
-			game.makePiles(random.sample(options, 10))
+			game.makePiles(random.sample(options, 8)+random.sample(empires, 2))
 		game.makeStartDeck()
 		gT = traa(game.start)
 		gT.start()

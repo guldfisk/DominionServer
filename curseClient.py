@@ -79,8 +79,8 @@ class ScrollWithInput(object):
 		self.running = True
 		self.escaped = True
 	def validation(self, c):
-		if c==ord('q'): sys.exit()
-		elif c==curses.KEY_UP:
+		#if c==ord('q'): sys.exit()
+		if c==curses.KEY_UP:
 			if not self.pos<1: self.pos -= 1
 			self.refresh()
 			log(self.pos)

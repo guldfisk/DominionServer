@@ -149,7 +149,7 @@ class MinusCost(Token):
 class TrashingToken(Token):
 	name = 'Trashing Token'
 	def trigger(self, signal, **kwargs):
-		if not (kwargs['pile']==self.owner and kwargs['player'].hand): return
+		if not (kwargs['pile']==self.owner and kwargs['player']==self.playerOwner and kwargs['player'].hand): return
 		choice = kwargs['player'].user([o.name for o in kwargs['player'].hand]+['No trash'], 'Choose trash')
 		if choice+1>len(kwargs['player'].hand): return
 		kwargs['player'].trash(choice)

@@ -177,7 +177,7 @@ class Workshop(Action, CardAdd):
 		super(Workshop, self).onPlay(player, **kwargs)
 		options = []
 		for pile in player.game.piles:
-			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<5 and player.game.piles[pile].viewTop().getPotionPrice(player)<1:
+			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<5 and player.game.piles[pile].viewTop().getPotionPrice(player)<1 and player.game.piles[pile].viewTop().getDebtPrice(player)<1:
 				options.append(pile)
 		if not options: return
 		choice = player.user(options, 'Choose gain')
@@ -225,7 +225,7 @@ class Feast(Action, CardAdd):
 				break
 		options = []
 		for pile in player.game.piles:
-			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<6 and player.game.piles[pile].viewTop().getPotionPrice(player)<1:
+			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<6 and player.game.piles[pile].viewTop().getPotionPrice(player)<1 and player.game.piles[pile].viewTop().getDebtPrice(player)<1:
 				options.append(pile)
 		if not options: return
 		choice = player.user(options, 'Choose gain')
@@ -280,11 +280,11 @@ class Remodel(Action, CardAdd):
 		super(Remodel, self).onPlay(player, **kwargs)
 		if not player.hand: return
 		choice = player.user([o.name for o in player.hand], 'Choose trash')
-		coinVal, potionVal = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player)
+		coinVal, potionVal, debtPrice = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player), player.hand[choice].getDebtPrice(player)
 		player.trash(choice)
 		options = []
 		for pile in player.game.piles:
-			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<=coinVal+2 and player.game.piles[pile].viewTop().getPotionPrice(player)<=potionVal: options.append(pile)
+			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<=coinVal+2 and player.game.piles[pile].viewTop().getPotionPrice(player)<=potionVal and player.game.piles[pile].viewTop().getDebtPrice(player)<=debtPrice: options.append(pile)
 		if not options: return
 		choice = player.user(options, 'Choose gain')
 		player.gainFromPile(player.game.piles[options[choice]])
@@ -456,12 +456,12 @@ class Mine(Action, CardAdd):
 		choice = player.user([o.name for o in options], 'Choose treasure trash')
 		for i in range(len(player.hand)):
 			if player.hand[i]==options[choice]:
-				coinVal, potionVal = player.hand[i].getPrice(player), player.hand[i].getPotionPrice(player)
+				coinVal, potionVal, debtPrice = player.hand[i].getPrice(player), player.hand[i].getPotionPrice(player), player.hand[choice].getDebtPrice(player)
 				player.trash(i)
 				break
 		options = []
 		for pile in player.game.piles:
-			if 'TREASURE' in player.game.piles[pile].viewTop().types and player.game.piles[pile].viewTop().getPrice(player)<=coinVal+3 and player.game.piles[pile].viewTop().getPotionPrice(player)<=potionVal:
+			if 'TREASURE' in player.game.piles[pile].viewTop().types and player.game.piles[pile].viewTop().getPrice(player)<=coinVal+3 and player.game.piles[pile].viewTop().getPotionPrice(player)<=potionVal and player.game.piles[pile].viewTop().getDebtPrice(player)<=debtPrice:
 				options.append(player.game.piles[pile])
 		if not options: return
 		choice = player.user([o.name for o in options], 'Choose gain')
@@ -702,8 +702,9 @@ class CountingHouse(Action, CardAdd):
 		for i in range(player.user(list(range(coppers+1)), 'Choose amnount')):
 			for n in range(len(player.discardPile)-1, -1, -1):
 				if player.discardPile[n].name=='Copper':
-					player.revealCard(player.discardPile[n])
+					player.reveal(player.discardPile[n])
 					player.hand.append(player.discardPile.pop(n))
+					break
 		
 class Mint(Action, CardAdd):
 	name = 'Mint'
@@ -888,11 +889,11 @@ class Expand(Action, CardAdd):
 		super(Expand, self).onPlay(player, **kwargs)
 		if not player.hand: return
 		choice = player.user([o.name for o in player.hand], 'Choose trash')
-		coinVal, potionVal = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player)
+		coinVal, potionVal, debtPrice = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player), player.hand[choice].getDebtPrice(player)
 		player.trash(choice)
 		options = []
 		for pile in player.game.piles:
-			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<=coinVal+3 and player.game.piles[pile].viewTop().getPotionPrice(player)<=potionVal:
+			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<=coinVal+3 and player.game.piles[pile].viewTop().getPotionPrice(player)<=potionVal and player.game.piles[pile].viewTop().getDebtPrice(player)<=debtPrice:
 				options.append(pile)
 		if not options: return
 		choice = player.user(options, 'Choose gain')
@@ -1565,7 +1566,7 @@ class Warrior(Action, Traveler, Attack, CardAdd):
 			card = player.getCard()
 			if not card: break
 			player.discardCard(card)
-			if not (card.getPrice(player) in (3, 4) and card.getPotionPrice(player)==0): continue
+			if not (card.getPrice(player) in (3, 4) and card.getPotionPrice(player)==0) and card.getDebtPrice(player)==0: continue
 			for i in range(len(player.discardPile)-1, -1, -1):
 				if player.discardPile[i]==card: player.trashCard(player.discardPile.pop(i))
 	def onPileCreate(self, pile, game, **kwargs):
@@ -1728,7 +1729,7 @@ class Teacher(Action, Reserve, CardAdd):
 				if 'BOONTOKEN' in pileToken.types and pileToken.playerOwner==self.owner:
 					hasBoon = True
 					break
-			if not hasBoon and 'ACTION' in self.owner.game.piles[pile].maskot.types: options.append(pile)
+			if not hasBoon and 'ACTION' in self.owner.game.piles[pile].viewTop().types: options.append(pile)
 		if not options: return
 		pile = options[self.owner.user(options, 'Choose pile')]
 		if token.owner:
@@ -1934,7 +1935,7 @@ class Messenger(Action, CardAdd):
 			elif kwargs['player'].game.events[i][0]=='startTurn': break
 		options = []
 		for pile in kwargs['player'].game.piles:
-			if kwargs['player'].game.piles[pile].viewTop() and kwargs['player'].game.piles[pile].viewTop().getPrice(kwargs['player'])<5 and kwargs['player'].game.piles[pile].viewTop().getPotionPrice(kwargs['player'])<1: options.append(pile)
+			if kwargs['player'].game.piles[pile].viewTop() and kwargs['player'].game.piles[pile].viewTop().getPrice(kwargs['player'])<5 and kwargs['player'].game.piles[pile].viewTop().getPotionPrice(kwargs['player'])<1 and player.game.piles[pile].viewTop().getDebtPrice(kwargs['player'])<1: options.append(pile)
 		if not options: return
 		choice = kwargs['player'].user(options, 'Choose gain')
 		for player in kwargs['player'].game.getPlayers(kwargs['player']): player.gainFromPile(kwargs['player'].game.piles[options[choice]])
@@ -2001,11 +2002,11 @@ class Transmogrify(Action, Reserve, CardAdd):
 		super(Transmogrify, self).call(signal, **kwargs)
 		choice = self.owner.user([o.name for o in self.owner.hand], 'Choose trash')
 		trashedCard = self.owner.hand[choice]
-		coinVal, potionVal = trashedCard.getPrice(self.owner), trashedCard.getPotionPrice(self)
+		coinVal, potionVal, debtPrice = trashedCard.getPrice(self.owner), trashedCard.getPotionPrice(self.owner), trashedCard.getDebtPrice(self.owner)
 		self.owner.trash(choice)
 		options = []
 		for pile in self.owner.game.piles:
-			if self.owner.game.piles[pile].viewTop() and self.owner.game.piles[pile].viewTop().getPrice(self.owner)==coinVal+1 and self.owner.game.piles[pile].viewTop().getPotionPrice(self.owner)==potionVal:
+			if self.owner.game.piles[pile].viewTop() and self.owner.game.piles[pile].viewTop().getPrice(self.owner)==coinVal+1 and self.owner.game.piles[pile].viewTop().getPotionPrice(self.owner)==potionVal and player.game.piles[pile].viewTop().getDebtPrice(player)==debtPrice:
 				options.append(pile)
 		if not options: return
 		choice = self.owner.user(options, 'Choose gain')
@@ -2029,7 +2030,7 @@ class Artificer(Action, CardAdd):
 			discarded += 1
 		options = []
 		for pile in player.game.piles:
-			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)==discarded and player.game.piles[pile].viewTop().getPotionPrice(player)==0:
+			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)==discarded and player.game.piles[pile].viewTop().getPotionPrice(player)==0 and player.game.piles[pile].viewTop().getDebtPrice(player)==0:
 				options.append(pile)
 		if not options: return
 		choice = player.user(options + ['No gain'], 'Choose gain')
@@ -2168,19 +2169,19 @@ class Relic(Treasure, Attack, CardAdd):
 	def attack(self, player, **kwargs):
 		player.minusDraw = True
 			
-class RoyaleCarriage(Action, Reserve, CardAdd):
-	name = 'Royale Carriage'
+class RoyalCarriage(Action, Reserve, CardAdd):
+	name = 'Royal Carriage'
 	def __init__(self, game, **kwargs):
-		super(RoyaleCarriage, self).__init__(game, **kwargs)
+		super(RoyalCarriage, self).__init__(game, **kwargs)
 		self.triggerSignal = 'playAction'
 		self.price = 5
 		self.links = []
 	def onPlay(self, player, **kwargs):
-		super(RoyaleCarriage, self).onPlay(player, **kwargs)
+		super(RoyalCarriage, self).onPlay(player, **kwargs)
 		self.links = []
 		player.addAction()
 	def call(self, signal, **kwargs):
-		super(RoyaleCarriage, self).call(signal, **kwargs)
+		super(RoyalCarriage, self).call(signal, **kwargs)
 		self.links.append(kwargs['card'])
 		self.owner.game.dp.connect(self.destroyTrigger, signal='destroy')
 		self.owner.playAction(kwargs['card'])
@@ -2281,7 +2282,7 @@ class Hireling(Action, Duration, CardAdd):
 	def onDestroy(self, player, **kwargs):
 		return True
 		
-adventures = [CoinOfTheRealm, Page, Peasant, Ratcatcher, Raze, Amulet, CaravanGuard, Dungeon, Gear, Guide, Duplicate, Magpie, Messenger, Miser, Port, Ranger, Transmogrify, Artificer, BridgeTroll, DistantLands, Giant, HauntedWoods, LostCity, Relic, RoyaleCarriage, Storyteller, SwampHag, TreasureTrove, WineMerchant, Hireling]
+adventures = [CoinOfTheRealm, Page, Peasant, Ratcatcher, Raze, Amulet, CaravanGuard, Dungeon, Gear, Guide, Duplicate, Magpie, Messenger, Miser, Port, Ranger, Transmogrify, Artificer, BridgeTroll, DistantLands, Giant, HauntedWoods, LostCity, Relic, RoyalCarriage, Storyteller, SwampHag, TreasureTrove, WineMerchant, Hireling]
 
 class Potion(Treasure, CardAdd):
 	name = 'Potion'
@@ -2429,7 +2430,7 @@ class University(Action, CardAdd):
 		player.addAction(amnt=2)
 		options = []
 		for pile in player.game.piles:
-			if player.game.piles[pile].viewTop() and player.game.piles[pile].maskot.getPrice(player)<6 and player.game.piles[pile].maskot.getPotionPrice(player)<1 and 'ACTION' in player.game.piles[pile].maskot.types:
+			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)<6 and player.game.piles[pile].viewTop().getPotionPrice(player)<1 and player.game.piles[pile].viewTop().getDebtPrice(player)<1 and 'ACTION' in player.game.piles[pile].viewTop().types:
 				options.append(pile)
 		if not options: return
 		choice = player.user(options+['No gain'], 'Choose gain')
@@ -2646,18 +2647,18 @@ class Develop(Action, CardAdd):
 		super(Develop, self).onPlay(player, **kwargs)
 		if not player.hand: return
 		choice = player.user([o.name for o in player.hand], 'Choose trash')
-		coinVal, potionVal = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player)
+		coinVal, potionVal, debtVal = player.hand[choice].getPrice(player), player.hand[choice].getPotionPrice(player), player.hand[choice].getPrice(player)
 		player.trash(choice)
 		if player.user(('Low first', 'High first'), 'Choose gain order'):
-			self.gain(player, coinVal+1, potionVal)
-			self.gain(player, coinVal-1, potionVal)
+			self.gain(player, coinVal+1, potionVal, debtVal)
+			self.gain(player, coinVal-1, potionVal, debtVal)
 		else:
-			self.gain(player, coinVal-1, potionVal)
-			self.gain(player, coinVal+1, potionVal)
-	def gain(self, player, cv, pv, **kwargs):
+			self.gain(player, coinVal-1, potionVal, debtVal)
+			self.gain(player, coinVal+1, potionVal, debtVal)
+	def gain(self, player, cv, pv, dv, **kwargs):
 		options = []
 		for pile in player.game.piles:
-			if player.game.piles[pile].viewTop() and player.game.piles[pile].maskot.getPrice(player)==cv and player.game.piles[pile].maskot.getPotionPrice(player)==pv: options.append(pile)
+			if player.game.piles[pile].viewTop() and player.game.piles[pile].viewTop().getPrice(player)==cv and player.game.piles[pile].viewTop().getPotionPrice(player)==pv and player.game.piles[pile].viewTop().getDebtPrice(player)==dv: options.append(pile)
 		if not options: return
 		choice = player.user(options, 'Choose gain')
 		player.gainFromPile(player.game.piles[options[choice]], to=player.library)
@@ -2736,7 +2737,7 @@ class Scheme(Action, CardAdd):
 		self.owner.game.dp.disconnect(self.endTurnTrigger, signal='endTurn')
 		self.owner.game.dp.disconnect(self.destroyTrigger, signal='destroy')
 		self.owner.game.dp.disconnect(self.turnEndedTrigger, signal='turnEnded')
-			
+	
 class Tunnel(Victory, Reaction, CardAdd):
 	name = 'Tunnel'
 	def __init__(self, game, **kwargs):
@@ -2755,7 +2756,7 @@ class Tunnel(Victory, Reaction, CardAdd):
 		self.disconnect(player=player)
 	def onReturn(self, player, **kwargs):
 		self.disconnect(player=player)
-		
+
 class JackOfAllTrades(Action, CardAdd):
 	name = 'Jack of all Trades'
 	def __init__(self, game, **kwargs):
@@ -2780,7 +2781,7 @@ class JackOfAllTrades(Action, CardAdd):
 			if player.hand[i]==options[choice]:
 				player.trash(i)
 				return
-		
+
 class NobleBrigand(Action, Attack, CardAdd):
 	name = 'Noble Brigand'
 	def __init__(self, game, **kwargs):
@@ -2813,7 +2814,7 @@ class NobleBrigand(Action, Attack, CardAdd):
 	def trigger(self, signal, **kwargs):
 		if 'pile' in kwargs and not self==kwargs['pile'].viewTop(): return
 		self.attackOpponents(kwargs['player'])
-		
+
 class NomadCamp(Action, CardAdd):
 	name = 'Nomad Camp'
 	def __init__(self, game, **kwargs):
@@ -2861,7 +2862,7 @@ class SpiceMerchant(Action, CardAdd):
 		else:
 			player.addCoin(amnt=2)
 			player.addBuy()
-		
+
 class Trader(Action, Reaction, CardAdd):
 	name = 'Trader'
 	def __init__(self, game, **kwargs):
@@ -2887,14 +2888,305 @@ class Trader(Action, Reaction, CardAdd):
 		self.disconnect(game=player.game)
 	def onReturn(self, player, **kwargs):
 		self.disconnect(game=player.game)
-		
+
 class Cache(Treasure, CardAdd):
 	name = 'Cache'
 	def __init__(self, game, **kwargs):
 		super(Cache, self).__init__(game, **kwargs)
 		self.value = 3
 		self.price = 5
-	def onPileCreate(self, player, **kwargs):
+	def onGain(self, player, **kwargs):
 		for i in range(2): player.gainFromPile(player.game.piles['Copper'])
+
+class Cartographer(Action, CardAdd):
+	name = 'Cartographer'
+	def __init__(self, game, **kwargs):
+		super(Cartographer, self).__init__(game, **kwargs)
+		self.price = 5
+	def onPlay(self, player, **kwargs):
+		super(Cartographer, self).onPlay(player, **kwargs)
+		player.draw()
+		player.addAction()
+		cards = player.getCards(4)
+		if not cards: return
+		while cards:
+			choice = player.user([o.name for o in cards]+['No discard'], 'Choose discard')
+			if choice+1>len(cards): break
+			player.discardCard(cards.pop(choice))
+		while cards: player.library.append(cards.pop(player.user([o.name for o in cards], 'Choose top')))
+
+class Embassy(Action, CardAdd):
+	name = 'Embassy'
+	def __init__(self, game, **kwargs):
+		super(Embassy, self).__init__(game, **kwargs)
+		self.price = 5
+	def onPlay(self, player, **kwargs):
+		super(Embassy, self).onPlay(player, **kwargs)
+		player.draw(amnt=5)
+		for i in range(3):
+			if not player.hand: return
+			player.discard(player.user([o.name for o in player.hand], 'Choose discard'))
+	def onGain(self, player, **kwargs):
+		for aplayer in player.game.getPlayers(player):
+			if not aplayer==player: aplayer.gainFromPile(player.game.piles['Silver'])
+
+class Haggler(Action, CardAdd):
+	name = 'Haggler'
+	def __init__(self, game, **kwargs):
+		super(Haggler, self).__init__(game, **kwargs)
+		self.price = 5
+	def onPlay(self, player, **kwargs):
+		super(Haggler, self).onPlay(player, **kwargs)
+		player.addCoin(amnt=2)
+		self.connect()
+	def onLeavePlay(self, player, **kwargs):
+		self.disconnect()
+	def trigger(self, signal, **kwargs):
+		if not kwargs['player']==self.owner: return
+		options = []
+		for pile in self.owner.game.piles:
+			if not self.owner.game.piles[pile].viewTop(): continue
+			option = self.owner.game.piles[pile].viewTop()
+			if option.costLessThan(kwargs['card'], self.owner): options.append(pile)
+		if not options: return
+		choice = self.owner.user(options, 'Choose gain')
+		self.owner.gainFromPile(self.owner.game.piles[options[choice]])
+	def connect(self, **kwargs):
+		self.owner.game.dp.connect(self.trigger, signal='buy')
+	def disconnect(self, **kwargs):
+		self.owner.game.dp.disconnect(self.trigger, signal='buy')
+
+class Highway(Action, CardAdd):
+	name = 'Highway'
+	def __init__(self, game, **kwargs):
+		super(Highway, self).__init__(game, **kwargs)
+		self.price = 5
+		self.reduction = 0
+	def onPlay(self, player, **kwargs):
+		super(Highway, self).onPlay(player, **kwargs)
+		player.addAction()
+		player.draw()
+		self.reduce()
+	def onLeavePlay(self, player, **kwargs):
+		self.inflate()
+	def reduce(self):
+		if self.reduction>0: return
+		self.reduction += 1
+		for card in self.owner.game.allCards: card.price -= 1
+	def inflate(self):
+		for card in self.owner.game.allCards: card.price += self.reduction
+		self.reduction = 0
+
+class IllGottenGains(Treasure, CardAdd):
+	name = 'Ill-Gotten Gains'
+	def __init__(self, game, **kwargs):
+		super(IllGottenGains, self).__init__(game, **kwargs)
+		self.price = 5
+		self.value = 1
+	def onPlay(self, player, **kwargs):
+		super(IllGottenGains, self).onPlay(player, **kwargs)
+		if player.user(['No', 'Yes'], 'Gain copper'): player.gainFromPile(player.game.piles['Copper'], to=player.hand)
+	def onGain(self, player, **kwargs):
+		for aplayer in player.game.getPlayers(player):
+			if not aplayer==player: aplayer.gainFromPile(player.game.piles['Curse'])
 		
-hinterlands = [Crossroads, Duchess, FoolsGold, Develop, Oasis, Oracle, Scheme, Tunnel, JackOfAllTrades, NobleBrigand, NomadCamp, SilkRoad, SpiceMerchant, Trader, Cache]
+hinterlands = [Crossroads, Duchess, FoolsGold, Develop, Oasis, Oracle, Scheme, Tunnel, JackOfAllTrades, NobleBrigand, NomadCamp, SilkRoad, SpiceMerchant, Trader, Cache, Cartographer, Embassy, Haggler, Highway, IllGottenGains]
+
+class CityQuarter(Action, CardAdd):
+	name = 'City Quarter'
+	def __init__(self, game, **kwargs):
+		super(CityQuarter, self).__init__(game, **kwargs)
+		self.debtPrice = 8
+	def onPlay(self, player, **kwargs):
+		super(CityQuarter, self).onPlay(player, **kwargs)
+		player.addAction(amnt=2)
+		actions = 0
+		for card in player.hand:
+			player.reveal(card)
+			if 'ACTION' in card.types: actions += 1
+		player.draw(amnt=actions)
+		
+class RoyalBlacksmith(Action, CardAdd):
+	name = 'Royal Blacksmith'
+	def __init__(self, game, **kwargs):
+		super(RoyalBlacksmith, self).__init__(game, **kwargs)
+		self.debtPrice = 8
+	def onPlay(self, player, **kwargs):
+		super(RoyalBlacksmith, self).onPlay(player, **kwargs)
+		player.draw(amnt=5)
+		actions = 0
+		for i in range(len(player.hand)-1, -1, -1):
+			player.reveal(player.hand[i])
+			if player.hand[i].name=='Copper': player.discard(i)
+			
+class Capital(Treasure, CardAdd):
+	name = 'Capital'
+	def __init__(self, game, **kwargs):
+		super(Capital, self).__init__(game, **kwargs)
+		self.price = 5
+		self.value = 6
+	def onPlay(self, player, **kwargs):
+		super(Capital, self).onPlay(player, **kwargs)
+		player.addBuy()
+		player.addDebt(amnt=6)
+	def onDiscard(self, player, **kwargs):
+		player.payDebt()
+		
+class Villa(Action, CardAdd):
+	name = 'Villa'
+	def __init__(self, game, **kwargs):
+		super(Villa, self).__init__(game, **kwargs)
+		self.price = 4
+	def onPlay(self, player, **kwargs):
+		super(Villa, self).onPlay(player, **kwargs)
+		player.addAction(amnt=2)
+		player.addCoin()
+		player.addBuy()
+	def onGain(self, player, **kwargs):
+		player.addAction()
+		index = kwargs['source'].index(self)
+		if index: player.hand.append(kwargs['source'].pop(index))
+		for i in range(len(player.game.events)-1, -1, -1):
+			if player.game.events[i][0]=='actionPhase' or player.game.events[i][0]=='treasurePhase': break
+			elif player.game.events[i][0]=='buyPhase' and player.game.events[i][1]['player']==player:
+				player.actionPhase()
+				player.treasurePhase()
+				player.buyPhase()
+				break
+		return True
+		
+class Gladiator(Action, CardAdd):
+	name = 'Gladiator'
+	def __init__(self, game, **kwargs):
+		super(Gladiator, self).__init__(game, **kwargs)
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Gladiator, self).onPlay(player, **kwargs)
+		player.addCoin(amnt=2)
+		if not player.hand: return
+		choice = player.user([o.name for o in player.hand], 'Choose reveal')
+		player.reveal(player.hand[choice])
+		splayer = player.game.getNextPlayer(player)
+		schoice = splayer.user([o.name for o in splayer.hand]+['No reveal'], 'Choose reveal')
+		if not schoice+1>len(splayer.hand): splayer.reveal(splayer.hand[schoice])
+		if schoice+1>len(splayer.hand) or splayer.hand[schoice]!=player.hand[choice]:
+			player.addCoin()
+			if player.game.piles['Gladiator/Fortune'].viewTop() and player.game.piles['Gladiator/Fortune'].viewTop().name=='Gladiator': player.trashCard(player.game.piles['Gladiator/Fortune'].gain())
+		
+class Fortune(Treasure, CardAdd):
+	name = 'Fortune'
+	def __init__(self, game, **kwargs):
+		super(Fortune, self).__init__(game, **kwargs)
+		self.price = 8
+		self.debtPrice = 8
+	def onPlay(self, player, **kwargs):
+		super(Fortune, self).onPlay(player, **kwargs)
+		player.addBuy()
+		for i in range(len(player.game.events)-1, -1, -1):
+			if player.game.events[i][0]=='doubleMoney' and player.game.events[i][1]['player']==player: return
+			elif player.game.events[i][0]=='startTurn': break
+		player.game.dp.send('doubleMoney', player=self)
+		player.addCoin(amnt=player.coins)
+	def onGain(self, player, **kwargs):
+		for card in player.inPlay:
+			if card.name=='Gladiator': player.gainFromPile(player.game.piles['Gold'])
+			
+class GladiatorFortune(Card, CardAdd):
+	name = 'Gladiator/Fortune'
+	def onPileCreate(self, pile, game, **kwargs):
+		for i in range(5): pile.append(Fortune(game))
+		for i in range(5): pile.append(Gladiator(game))
+		
+class Settlers(Action, CardAdd):
+	name = 'Settlers'
+	def __init__(self, game, **kwargs):
+		super(Settlers, self).__init__(game, **kwargs)
+		self.price = 2
+	def onPlay(self, player, **kwargs):
+		super(Settlers, self).onPlay(player, **kwargs)
+		player.addAction()
+		player.draw()
+		coppers = 0
+		for card in player.discardPile:
+			if card.name=='Copper': coppers+=1
+		for i in range(player.user(list(range(min(coppers, 1)+1)), 'Choose amnount')):
+			for n in range(len(player.discardPile)-1, -1, -1):
+				if player.discardPile[n].name=='Copper':
+					player.reveal(player.discardPile[n])
+					player.hand.append(player.discardPile.pop(n))
+					break
+					
+class BustlingVillage(Action, CardAdd):
+	name = 'Bustling Village'
+	def __init__(self, game, **kwargs):
+		super(BustlingVillage, self).__init__(game, **kwargs)
+		self.price = 5
+	def onPlay(self, player, **kwargs):
+		super(BustlingVillage, self).onPlay(player, **kwargs)
+		player.addAction(amnt=3)
+		player.draw()
+		settlers = 0
+		for card in player.discardPile:
+			if card.name=='Settlers': settlers+=1
+		for i in range(player.user(list(range(min(settlers, 1)+1)), 'Choose amnount')):
+			for n in range(len(player.discardPile)-1, -1, -1):
+				if player.discardPile[n].name=='Settlers':
+					player.reveal(player.discardPile[n])
+					player.hand.append(player.discardPile.pop(n))
+					break
+					
+class SettlersBustlingVillage(Card, CardAdd):
+	name = 'Settlers/BustlingVillage'
+	def onPileCreate(self, pile, game, **kwargs):
+		for i in range(5): pile.append(BustlingVillage(game))
+		for i in range(5): pile.append(Settlers(game))
+
+class Catapult(Action, Attack, CardAdd):
+	name = 'Catapult'
+	def __init__(self, game, **kwargs):
+		super(Catapult, self).__init__(game, **kwargs)
+		Attack.__init__(self, game, **kwargs)
+		self.price = 3
+	def onPlay(self, player, **kwargs):
+		super(Catapult, self).onPlay(player, **kwargs)
+		player.addCoin()
+		if not player.hand: return
+		attacks = []
+		choice = player.user([o.name for o in player.hand], 'Choose trash')
+		if player.hand[choice].getPrice(player)>2: attacks.append(self.attackCurse)
+		if 'TREASURE' in player.hand[choice].types: attakcs.append(self.attackDiscard)
+		player.trash(choice)
+		for aplayer in player.game.getPlayers(player):
+			if aplayer==player: continue
+			for attack in attacks: aplayer.attack(attack, self, controller=player)
+	def attackCurse(self, player, **kwargs):
+		player.gainFromPile(player.game.piles['Curse'])
+	def attackDiscard(self, player, **kwargs):
+		while len(player.hand)>3:
+			choice = player.user([o.name for o in player.hand], 'Choose discard')
+			player.discard(choice)
+			
+class Rocks(Treasure, CardAdd):
+	name = 'Rocks'
+	def __init__(self, game, **kwargs):
+		super(Rocks, self).__init__(game, **kwargs)
+		self.price = 4
+	def gainSilver(self, player, **kwargs):
+		for i in range(len(player.game.events)-1, -1, -1):
+			if player.game.events[i][0]=='actionPhase' or player.game.events[i][0]=='treasurePhase': break
+			elif player.game.events[i][0]=='buyPhase' and player.game.events[i][1]['player']==player:
+				player.gainFromPile(player.game.piles[pile], to=player.library)
+				return
+		player.gainFromPile(player.game.piles[pile], to=player.hand)
+	def onGain(self, player, **kwargs):
+		self.gainSilver(player)
+	def onTrash(self, player, **kwargs):
+		self.gainSilver(player)
+		
+class CatapultRocks(Card, CardAdd):
+	name = 'Catapult/Rocks'
+	def onPileCreate(self, pile, game, **kwargs):
+		for i in range(5): pile.append(Rocks(game))
+		for i in range(5): pile.append(Catapult(game))
+		
+empires = [CityQuarter, RoyalBlacksmith, Capital, Villa, GladiatorFortune, SettlersBustlingVillage, CatapultRocks]

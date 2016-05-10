@@ -69,7 +69,10 @@ class Game(object):
 		self.running = False
 	def pilesView(self, player):
 		ud = ''
-		for key in sorted(self.piles): ud+=key+' '+str(self.piles[key].maskot.getPrice(player))+'$: '+str(len(self.piles[key]))+', '
+		for key in sorted(self.piles):
+			top = self.piles[key].viewTop()
+			if top: ud+=top.name+' '+str(top.getPrice(player))+'$: '+str(len(self.piles[key]))+', '
+			else: ud+=key+' '+str(self.piles[key].maskot.getPrice(player))+'$: '+str(len(self.piles[key]))+', '
 		return ud
 	def eventsView(self, player):
 		ud = ''
@@ -185,6 +188,7 @@ class Player(object):
 		self.actions = 0
 		self.buys = 0
 		self.victories = 0
+		self.debt = 0
 		self.hand = CPile(name='hand', faceup=False)
 		self.library = CPile(name='library', faceup=False, ordered=True)
 		self.inPlay = CPile(name='inPlay')
@@ -217,7 +221,7 @@ class Player(object):
 			for key in sorted(self.game.eventSupply): ud+=key+' '+str(self.game.eventSupply[key].getPrice(self))+'$, '
 			return ud
 	def getStatView(self):
-		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+'\tJourney: '+str(self.journey)+'\nCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)+'\tPotions: '+str(self.potions)+'\nMinus Coin: '+str(self.minusCoin)+'\tMinus Draw: '+str(self.minusDraw)
+		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+'\tJourney: '+str(self.journey)+'\nCoins: '+str(self.coins)+', Buys: '+str(self.buys)+', Potions: '+str(self.potions)+', Debt: '+str(self.debt)+'\nMinus Coin: '+str(self.minusCoin)+'\tMinus Draw: '+str(self.minusDraw)
 	def getOpponentView(self):
 		return self.inPlay.getView(), self.getStatView(), self.discardPile.getView(), self.matsView()
 	def updateUI(self):
@@ -302,15 +306,22 @@ class Player(object):
 				playedTreasure = self.hand.pop(choice)
 				self.inPlay.append(playedTreasure)
 				self.playTreasure(playedTreasure)
+	def payDebt(self, **kwargs):
+		if self.debt<1: return
+		choice = self.user(list(range(min(self.debt, self.coins)+1)), 'Choose amnount')
+		self.debt -= choice
+		self.coins -= choice
 	def buyPhase(self, **kwargs):
 		self.game.dp.send(signal='buyPhase', player=self)
 		self.channelOut(self.request('king'), 'resp', False)
+		self.payDebt()
 		while self.buys>0:
 			self.channelOut(self.request('stat'), 'resp', False)
 			choice = self.user(list(self.game.piles)+list(self.game.eventSupply)+['EndBuyPhase'], 'buySelection')
 			if choice+1>len(self.game.piles)+len(self.game.eventSupply): break
 			elif choice<len(self.game.piles): self.buy(self.game.piles[list(self.game.piles)[choice]])
 			else: self.buyEvent(self.game.eventSupply[list(self.game.eventSupply)[choice-len(self.game.piles)]])
+		self.payDebt()
 	def getFromPlay(self, position=None):
 		if position==None:
 			self.inPlay[-1].onLeavePlay(self)
@@ -427,7 +438,7 @@ class Player(object):
 		kwargs.get('to', self.discardPile).append(card)
 	def gain(self, card, source, **kwargs):
 		if source.index(card)==None: return
-		if not self.game.dp.send(signal='tryGain', player=self, card=card, source=source, kwargs=kwargs) and card and not card.onGain(self) and not self.game.dp.send(signal='gain', player=self, card=card, source=source, kwargs=kwargs):
+		if not self.game.dp.send(signal='tryGain', player=self, card=card, source=source, kwargs=kwargs) and card and not self.game.dp.send(signal='gain', player=self, card=card, source=source, kwargs=kwargs) and not card.onGain(self, source=source, kwargs=kwargs):
 			index = source.index(card)
 			if index==None: return
 			cardGained = source.pop(index)
@@ -438,13 +449,16 @@ class Player(object):
 	def takeFromPile(self, pile, **kwargs):
 		self.take(pile.gain(), fromz=pile, **kwargs)
 	def buy(self, pile, **kwargs):
+		if self.debt>0: return
 		if pile and self.buys>0 and pile[-1].getPrice(self)<=self.coins and pile[-1].getPotionPrice(self)<=self.potions and not self.game.dp.send(signal='tryBuy', player=self, pile=pile, card = pile.viewTop()):
 			self.game.dp.send(signal='buy', player=self, pile=pile, card = pile.viewTop())
 			self.buys -= 1
 			self.coins -= pile[-1].getPrice(self)
 			self.potions -= pile[-1].getPotionPrice(self)
+			self.debt += pile[-1].getDebtPrice(self)
 			self.gainFromPile(pile)
 	def buyEvent(self, event, **kwargs):
+		if self.debt>0: return
 		if self.buys>0 and event.getPrice(self)<=self.coins and event.getPotionPrice(self)<=self.potions and not self.game.dp.send(signal='tryBuyEvent', player=self, event=event):
 			self.game.dp.send(signal='buyEvent', player=self, event=event)
 			self.buys -= 1
@@ -472,6 +486,10 @@ class Player(object):
 		if kwargs.get('amnt', 1)==0: return
 		self.game.dp.send(signal='addPotion', player=self, amnt=kwargs.get('amnt', 1))
 		self.potions += kwargs.get('amnt', 1)
+	def addDebt(self, **kwargs):
+		if kwargs.get('amnt', 1)==0: return
+		self.game.dp.send(signal='addDebt', player=self, amnt=kwargs.get('amnt', 1))
+		self.debt += kwargs.get('amnt', 1)
 	def addBuy(self, **kwargs):
 		if kwargs.get('amnt', 1)==0: return
 		self.game.dp.send(signal='addBuy', player=self, amnt=kwargs.get('amnt', 1))
@@ -537,6 +555,8 @@ class CardAdd(object):
 		return np.max((self.price, 0))
 	def getPotionPrice(self, player, **kwargs):
 		return np.max((self.potionPrice, 0))
+	def getDebtPrice(self, player, **kwargs):
+		return np.max((self.debtPrice, 0))
 	def view(self, **kwargs):
 		return self.name
 	def onPlay(self, player, **kwargs):
@@ -562,8 +582,18 @@ class Card(object):
 		if not hasattr(self, 'types'): self.types = []
 		self.price = kwargs.get('price', 0)
 		self.potionPrice = kwargs.get('potionPrice', 0)
+		self.debtPrice = kwargs.get('debtPrice', 0)
 		self.owner = None
-
+	def costLessThan(self, card, player):
+		works = False
+		if self.getPrice(player)>card.getPrice(player): return False
+		elif self.getPrice(player)==card.getPrice(player): works = True
+		if self.getPotionPrice(player)>card.getPotionPrice(player): return False
+		elif self.getPotionPrice(player)==card.getPotionPrice(player): works = True
+		if self.getDebtPrice(player)>card.getDebtPrice(player): return False
+		elif self.getDebtPrice(player)==card.getDebtPrice(player): works = True
+		return works
+		
 class Event(object):
 	name = 'BaseEvent'
 	def __init__(self, game, **kwargs):
