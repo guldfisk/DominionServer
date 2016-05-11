@@ -3028,8 +3028,8 @@ class Capital(Treasure, CardAdd):
 	def onPlay(self, player, **kwargs):
 		super(Capital, self).onPlay(player, **kwargs)
 		player.addBuy()
-		player.addDebt(amnt=6)
 	def onDiscard(self, player, **kwargs):
+		player.addDebt(amnt=6)
 		player.payDebt()
 		
 class Villa(Action, CardAdd):
