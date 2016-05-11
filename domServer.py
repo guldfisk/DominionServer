@@ -86,6 +86,7 @@ class OnlinePlayer(server.CST):
 		options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands
 		allEvents = adventuresEvents
 		if allCards:
+			options+=empires
 			game.makePiles(options)
 			game.makeEvents(allEvents)
 		else:

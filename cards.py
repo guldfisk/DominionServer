@@ -3028,7 +3028,7 @@ class Capital(Treasure, CardAdd):
 	def onPlay(self, player, **kwargs):
 		super(Capital, self).onPlay(player, **kwargs)
 		player.addBuy()
-	def onDiscard(self, player, **kwargs):
+	def onDestroy(self, player, **kwargs):
 		player.addDebt(amnt=6)
 		player.payDebt()
 		

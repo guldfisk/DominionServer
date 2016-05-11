@@ -1837,3 +1837,16 @@ COMMAND, game, False
 959
 958
 957
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+974
+973
+972
+971

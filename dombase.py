@@ -309,6 +309,8 @@ class Player(object):
 	def payDebt(self, **kwargs):
 		if self.debt<1: return
 		choice = self.user(list(range(min(self.debt, self.coins)+1)), 'Choose amnount')
+		if choice==0: return
+		self.game.dp.send('payDebt', player=self, amnt=choice)
 		self.debt -= choice
 		self.coins -= choice
 	def buyPhase(self, **kwargs):
