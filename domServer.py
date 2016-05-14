@@ -83,15 +83,17 @@ class OnlinePlayer(server.CST):
 		games.append(game)
 		for player in game.players:	player.game = game
 		game.makePiles(baseSetBase)
-		options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands
+		options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands+empires
 		allEvents = adventuresEvents
 		if allCards:
-			options+=empires
+			#options = empires+baseSet
 			game.makePiles(options)
 			game.makeEvents(allEvents)
 		else:
 			game.makeEvents(random.sample(allEvents, random.randint(0, 2)))
-			game.makePiles(random.sample(options, 8)+random.sample(empires, 2))
+			piles = random.sample(empires, 2)
+			piles += random.sample([o for o in options if not o in piles], 8)
+			game.makePiles(piles)
 		game.makeStartDeck()
 		gT = traa(game.start)
 		gT.start()

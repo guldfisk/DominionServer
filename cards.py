@@ -372,14 +372,14 @@ class ThroneRoom(Action, CardAdd):
 	def onLeavePlay(self, player, **kwargs):
 		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
 	def trigger(self, signal, **kwargs):
+		print('THRONE ROOM DESTROY TRIGGER', self, kwargs['card'], self.links)
 		if kwargs['card']==self: return
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
+		print('LINKS', self.links)
 		if self.links: return
-		for i in range(len(self.owner.inPlay)):
-			if self.owner.inPlay[i]==self:
-				self.owner.destroy(i)
-				break
+		print('NO LINKS')
+		self.owner.destroy(self)
 		
 class CouncilRoom(Action, CardAdd):
 	name = 'Council Room'
@@ -534,8 +534,7 @@ class TradeToken(Token, CardAdd):
 		if 'fromz' in kwargs and kwargs['fromz']==self.owner:
 			for i in range(len(self.owner.tokens)):
 				if self.owner.tokens[i]==self:
-					self.game.globalMats['TradeRouteMat'].append(self.owner.tokens.pop(i))
-					self.owner.removeToken(self, self.game)
+					self.game.globalMats['TradeRouteMat'].append(self.owner.getToken(self, self.game))
 					break
 						
 class TradeRoute(Action, CardAdd):
@@ -934,13 +933,11 @@ class KingsCourt(Action, CardAdd):
 			if 'ACTION' in card.types:
 				options.append(card)
 		if not options: return
-		print('\t', player.hand)
 		choice = player.user([o.name for o in options], 'Choose action')
 		for i in range(len(player.hand)):
 			if player.hand[i]==options[choice]:
 				player.inPlay.append(player.hand.pop(i))
 				break
-		print('\t', player.hand)
 		self.links.append(options[choice])
 		player.game.dp.connect(self.trigger, signal='destroy')
 		for i in range(3): player.playAction(options[choice])
@@ -950,14 +947,10 @@ class KingsCourt(Action, CardAdd):
 		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
 	def trigger(self, signal, **kwargs):
 		if kwargs['card']==self: return
-		if kwargs['card']==self: return
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
 		if self.links: return
-		for i in range(len(self.owner.inPlay)):
-			if self.owner.inPlay[i]==self:
-				self.owner.destroy(i)
-				break
+		self.owner.destroy(self)
 
 class Peddler(Action, CardAdd):
 	name = 'Peddler'
@@ -1703,10 +1696,7 @@ class Disciple(Action, Traveler, CardAdd):
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
 		if self.links: return
-		for i in range(len(self.owner.inPlay)):
-			if self.owner.inPlay[i]==self:
-				self.owner.destroy(i)
-				break
+		self.owner.destroy(self)
 	def onPileCreate(self, pile, game, **kwargs):
 		game.require(self.morph)
 		for i in range(5): pile.append(type(self)(game))
@@ -1735,8 +1725,7 @@ class Teacher(Action, Reserve, CardAdd):
 		if token.owner:
 			for i in range(len(token.owner.tokens)):
 				if token==token.owner.tokens[i]:
-					tok = token.owner.tokens.pop(i)
-					token.owner.removeToken(tok, self.owner.game)
+					token.owner.getToken(token, self.owner.game)
 					break
 		self.owner.game.piles[pile].addToken(token, self.owner.game)
 	def onPileCreate(self, pile, game, **kwargs):
@@ -2194,10 +2183,7 @@ class RoyalCarriage(Action, Reserve, CardAdd):
 		for i in range(len(self.links)-1, -1, -1):
 			if self.links[i]==kwargs['card']: self.links.pop(i)
 		if self.links: return
-		for i in range(len(self.owner.inPlay)):
-			if self.owner.inPlay[i]==self:
-				self.owner.destroy(i)
-				break
+		self.owner.destroy(self)
 				
 class Storyteller(Action, CardAdd):
 	name = 'Storyteller'
@@ -3188,5 +3174,68 @@ class CatapultRocks(Card, CardAdd):
 	def onPileCreate(self, pile, game, **kwargs):
 		for i in range(5): pile.append(Rocks(game))
 		for i in range(5): pile.append(Catapult(game))
+
+class Crown(Action, Treasure, CardAdd):
+	name = 'Crown'
+	def __init__(self, game, **kwargs):
+		super(Crown, self).__init__(game, **kwargs)
+		Treasure.__init__(self, game, **kwargs)
+		self.price = 5
+		self.links = []
+	def onPlay(self, player, **kwargs):
+		super(Crown, self).onPlay(player, **kwargs)
+		for i in range(len(player.game.events)-1, -1, -1):
+			if player.game.events[i][0]=='actionPhase' and player.game.events[i][1]['player']==player:
+				self.doublePlay(player, 'ACTION', **kwargs)
+				return
+			elif player.game.events[i][0]=='treasurePhase' and player.game.events[i][1]['player']==player:
+				self.doublePlay(player, 'TREASURE', **kwargs)
+				return
+	def doublePlay(self, player, tp='ACTION', **kwargs):
+		self.links = []
+		options = []
+		for card in player.hand:
+			if tp in card.types:
+				options.append(card)
+		if not options: return
+		choice = player.user([o.name for o in options], 'Choose '+tp)
+		for i in range(len(player.hand)):
+			if player.hand[i]==options[choice]:
+				player.inPlay.append(player.hand.pop(i))
+				break
+		self.links.append(options[choice])
+		player.game.dp.connect(self.trigger, signal='destroy')
+		for i in range(2):
+			if tp=='ACTION': player.playAction(options[choice])
+			elif tp=='TREASURE': player.playTreasure(options[choice])
+	def onDestroy(self, player, **kwargs):
+		if self.links: return True
+	def onLeavePlay(self, player, **kwargs):
+		if self.links: player.game.dp.disconnect(self.trigger, signal='destroy')
+	def trigger(self, signal, **kwargs):
+		if kwargs['card']==self: return
+		for i in range(len(self.links)-1, -1, -1):
+			if self.links[i]==kwargs['card']: self.links.pop(i)
+		if self.links: return
+		self.owner.destroy(self)
+
+class GroundsKeeper(Action, CardAdd):
+	name = 'Grounds Keeper'
+	def __init__(self, game, **kwargs):
+		super(Goons, self).__init__(game, **kwargs)
+		self.price = 5
+	def onPlay(self, player, **kwargs):
+		super(GroundsKeeper, self).onPlay(player, **kwargs)
+		self.connect()
+		player.addAction()
+		player.draw()
+	def onLeavePlay(self, player, **kwargs):
+		self.disconnect()
+	def trigger(self, signal, **kwargs):
+		if kwargs['player']==self.owner and 'VICTORY' in kwargs['card'].types: self.owner.addVictory()
+	def connect(self, **kwargs):
+		player.game.dp.connect(self.trigger, signal='buy')
+	def disconnect(self, **kwargs):
+		player.game.dp.disconnect(self.trigger, signal='buy')
 		
-empires = [CityQuarter, RoyalBlacksmith, Capital, Villa, GladiatorFortune, SettlersBustlingVillage, CatapultRocks]
+empires = [CityQuarter, RoyalBlacksmith, Capital, Villa, GladiatorFortune, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper]

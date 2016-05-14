@@ -1850,3 +1850,67 @@ COMMAND, test, False
 973
 972
 971
+39, 168
+COMMAND, conn, True
+COMMAND, game, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+COMMAND, conc, False
+COMMAND, test, False
+COMMAND, conc, False
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False
+39, 168
+COMMAND, conn, True
+COMMAND, test, False

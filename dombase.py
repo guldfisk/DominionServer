@@ -176,8 +176,8 @@ class Game(object):
 		return ud
 	def makeStartDeck(self):
 		for player in self.players:
-			for i in range(7): player.gainFromPile(self.piles['Copper'])
-			for i in range(3): player.gainFromPile(self.piles['Estate'])
+			for i in range(7): player.gainFromPile(self.piles["Throne Room"])
+			for i in range(3): player.gainFromPile(self.piles['Smithy'])
 			#for i in range(3): player.gainFromPile(self.piles['Copper'])
 			for card in player.discardPile: self.allCards.append(card)
 	
@@ -331,21 +331,15 @@ class Player(object):
 		else:
 			self.inPlay[position].onLeavePlay(self)
 			return self.inPlay.pop(position)
-	def destroy(self, position, **kwargs):
-		if not self.inPlay[position].onDestroy(self) and not self.game.dp.send(signal='destroy', player=self, card=self.inPlay[position]):
+	def destroy(self, card, **kwargs):
+		if not card.onDestroy(self) and not self.game.dp.send(signal='destroy', player=self, card=card):
+			position = self.inPlay.index(card)
+			if position==None: return
 			self.inPlay[position].onLeavePlay(self)
-			self.discardPile.append(self.inPlay[position])
+			self.discardPile.append(self.inPlay.pop(position))
 	def destroyAll(self, **kwargs):
 		print('STARTDESTROYALL', [o.name for o in self.inPlay], self.inPlay)
-		cards = []
-		for card in copy.copy(self.inPlay):
-			if not card.onDestroy(self) and not self.game.dp.send(signal='destroy', player=self, card=card): cards.append(card)
-		for card in cards:
-			for i in range(len(self.inPlay)):
-				if card==self.inPlay[i]:
-					card.onLeavePlay(self)
-					self.discardPile.append(self.inPlay.pop(i))
-					break
+		for card in copy.copy(cards): self.destroy(card)
 		print('ENDDESTROYALL', [o.name for o in self.inPlay], len(self.inPlay))
 	def getCard(self, **kwargs):
 		if not self.library:
@@ -527,7 +521,7 @@ class Pile(CPile):
 		self.terminator = kwargs.get('terminator', False)
 		self.maskot.onPileCreate(self, game) #X fucking D
 		self.name = self.maskot.name
-		self.tokens = []
+		self.tokens = CPile()
 		for card in self:
 			game.allCards.append(card)
 	def gain(self, **kwargs):
@@ -544,6 +538,13 @@ class Pile(CPile):
 		token.owner = self
 		token.onAddPile(self)
 		self.tokens.append(token)
+	def getToken(self, token, game, **kwargs):
+		i = self.tokens.index(token)
+		if i==None: return
+		self.removeToken(token, game, **kwargs)
+		i = self.tokens.index(token)
+		if i==None: return
+		return self.tokens.pop(i)
 	def removeToken(self, token, game, **kwargs):
 		game.dp.send(signal='removeToken', pile=self, token=token)
 		token.onLeavePile(self)
@@ -620,7 +621,7 @@ class Event(object):
 class Treasure(Card):
 	def __init__(self, game, **kwargs):
 		super(Treasure, self).__init__(game, **kwargs)
-		self.value = 1
+		self.value = 0
 		self.potionValue = 0
 		self.types.append('TREASURE')
 	def getValue(self, player, **kwargs):
