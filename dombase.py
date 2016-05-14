@@ -176,8 +176,8 @@ class Game(object):
 		return ud
 	def makeStartDeck(self):
 		for player in self.players:
-			for i in range(7): player.gainFromPile(self.piles["Throne Room"])
-			for i in range(3): player.gainFromPile(self.piles['Smithy'])
+			for i in range(7): player.gainFromPile(self.piles['Copper'])
+			for i in range(3): player.gainFromPile(self.piles['Estate'])
 			#for i in range(3): player.gainFromPile(self.piles['Copper'])
 			for card in player.discardPile: self.allCards.append(card)
 	
@@ -339,7 +339,7 @@ class Player(object):
 			self.discardPile.append(self.inPlay.pop(position))
 	def destroyAll(self, **kwargs):
 		print('STARTDESTROYALL', [o.name for o in self.inPlay], self.inPlay)
-		for card in copy.copy(cards): self.destroy(card)
+		for card in copy.copy(self.inPlay): self.destroy(card)
 		print('ENDDESTROYALL', [o.name for o in self.inPlay], len(self.inPlay))
 	def getCard(self, **kwargs):
 		if not self.library:

@@ -3222,7 +3222,7 @@ class Crown(Action, Treasure, CardAdd):
 class GroundsKeeper(Action, CardAdd):
 	name = 'Grounds Keeper'
 	def __init__(self, game, **kwargs):
-		super(Goons, self).__init__(game, **kwargs)
+		super(GroundsKeeper, self).__init__(game, **kwargs)
 		self.price = 5
 	def onPlay(self, player, **kwargs):
 		super(GroundsKeeper, self).onPlay(player, **kwargs)
