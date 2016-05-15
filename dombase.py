@@ -4,6 +4,9 @@ import re
 import numpy as np
 import math as m
 import copy
+import sys
+sys.path.append('C:\\Projeter\\farligfarligslange\\events')
+from FullEvent import *
 
 class CPile(list):
 	def __init__(self, *args, **kwargs):
@@ -48,10 +51,10 @@ def testUser(options):
 				break
 	return choicePosition
 
-class Game(object):
+class Game(EventSession):
 	def __init__(self, **kwargs):
-		self.allCards = []
-		self.delayedActions = []
+		#self.allCards = []
+		#self.delayedActions = []
 		self.trash = CPile(name='Trash')
 		self.players = kwargs.get('players', [])
 		self.piles = {}
