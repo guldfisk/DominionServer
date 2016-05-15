@@ -53,8 +53,7 @@ def testUser(options):
 
 class Game(EventSession):
 	def __init__(self, **kwargs):
-		#self.allCards = []
-		#self.delayedActions = []
+		super(Game, self).__init__(**kwargs)
 		self.trash = CPile(name='Trash')
 		self.players = kwargs.get('players', [])
 		self.piles = {}
@@ -68,7 +67,7 @@ class Game(EventSession):
 		self.turnFlag = ''
 		self.round = 0
 		self.conceded = []
-		self.dp = dp.Dispatcher()
+		#self.dp = dp.Dispatcher()
 		self.running = False
 	def pilesView(self, player):
 		ud = ''
@@ -93,11 +92,11 @@ class Game(EventSession):
 		self.NSPiles[card.name] = Pile(card, self)
 	def evLogger(self, signal, **kwargs):
 		self.events.append((signal, kwargs))
-	def emptyDelayed(self):
-		print('EMPTY DELAYED', len(self.delayedActions), self.delayedActions)
-		while self.delayedActions:
-			action = self.delayedActions.pop()
-			action[0](**action[1])
+	#def emptyDelayed(self):
+	#	print('EMPTY DELAYED', len(self.delayedActions), self.delayedActions)
+	#	while self.delayedActions:
+	#		action = self.delayedActions.pop()
+	#		action[0](**action[1])
 	def start(self, endCon=None):
 		self.running = True
 		if not endCon: endCondition = self.checkGameEnd
@@ -520,13 +519,10 @@ class Pile(CPile):
 		self.game = game
 		self.cardType = cardType
 		self.maskot = cardType(game)
-		game.allCards.append(self.maskot)
 		self.terminator = kwargs.get('terminator', False)
 		self.maskot.onPileCreate(self, game) #X fucking D
 		self.name = self.maskot.name
 		self.tokens = CPile()
-		for card in self:
-			game.allCards.append(card)
 	def gain(self, **kwargs):
 		if not self: return
 		popped = self.pop()
@@ -552,7 +548,8 @@ class Pile(CPile):
 		game.dp.send(signal='removeToken', pile=self, token=token)
 		token.onLeavePile(self)
 		token.owner = None
-		
+
+"""		
 class CardAdd(object):
 	def onPileCreate(self, pile, game, **kwargs):
 		for i in range(10):
@@ -581,27 +578,29 @@ class CardAdd(object):
 		pass
 	def onLeavePlay(self, player, **kwargs):
 		pass
+"""
 	
-class Card(object):
+	
+class Card(WithPAs):
 	name = 'BaseCard'
 	def __init__(self, game, **kwargs):
 		if not hasattr(self, 'types'): self.types = []
-		self.price = kwargs.get('price', 0)
-		self.potionPrice = kwargs.get('potionPrice', 0)
-		self.debtPrice = kwargs.get('debtPrice', 0)
+		self.coinPrice = self.PA('coinPrice', kwargs.get('price', 0))
+		self.potionPrice = self.PA('potionPrice', kwargs.get('potionPrice', 0))
+		self.debtPrice = self.PA('potionPrice', kwargs.get('debtPrice', 0))
 		self.owner = None
-	def costLessThan(self, card, player):
-		works = False
-		if self.getPrice(player)>card.getPrice(player): return False
-		elif self.getPrice(player)==card.getPrice(player): works = True
-		if self.getPotionPrice(player)>card.getPotionPrice(player): return False
-		elif self.getPotionPrice(player)==card.getPotionPrice(player): works = True
-		if self.getDebtPrice(player)>card.getDebtPrice(player): return False
-		elif self.getDebtPrice(player)==card.getDebtPrice(player): works = True
-		return works
+	#def costLessThan(self, card, player):
+	#	works = False
+	#	if self.getPrice(player)>card.getPrice(player): return False
+	#	elif self.getPrice(player)==card.getPrice(player): works = True
+	#	if self.getPotionPrice(player)>card.getPotionPrice(player): return False
+	#	elif self.getPotionPrice(player)==card.getPotionPrice(player): works = True
+	#	if self.getDebtPrice(player)>card.getDebtPrice(player): return False
+	#	elif self.getDebtPrice(player)==card.getDebtPrice(player): works = True
+	#	return works
 		
-class Event(object):
-	name = 'BaseEvent'
+class DEvent(object):
+	name = 'BaseDEvent'
 	def __init__(self, game, **kwargs):
 		self.price = kwargs.get('price', 0)
 		self.potionPrice = kwargs.get('potionPrice', 0)
@@ -624,8 +623,8 @@ class Event(object):
 class Treasure(Card):
 	def __init__(self, game, **kwargs):
 		super(Treasure, self).__init__(game, **kwargs)
-		self.value = 0
-		self.potionValue = 0
+		self.coinValue = self.PA('coinValue', 0)
+		self.potionValue = self.PA('potionValue', 0)
 		self.types.append('TREASURE')
 	def getValue(self, player, **kwargs):
 		return self.value
@@ -641,7 +640,7 @@ class Treasure(Card):
 class Victory(Card):
 	def __init__(self, game, **kwargs):
 		super(Victory, self).__init__(game, **kwargs)
-		self.value = 1
+		self.victoryValue = self.PA('victoryValue', 0)
 		self.types.append('VICTORY')
 	def onGameEnd(self, player, **kwargs):
 		player.addVictory(amnt=self.value)
@@ -661,30 +660,28 @@ class Action(Card):
 class Cursed(Card):
 	def __init__(self, game, **kwargs):
 		super(Cursed, self).__init__(game, **kwargs)
-		self.value = -1
+		self.victoryValue.set(-1)
 		self.types.append('CURSED')
 	def onGameEnd(self, player, **kwargs):
 		player.addVictory(amnt=self.value)
 		
 class Reaction(object):
+	triggerSignal = 'Any'
 	def __init__(self, game, **kwargs):
 		self.types.append('REACTION')
-		self.signal = 'noSignal'
-	def trigger(self, signal, **kwargs):
+		self.trigger = Trigger(game, trigger=self.triggerSignal, successfulLoad=self.successfulLoad, condition=self.condition)
+		self.trigger.connect()
+	def successfulLoad(self, **kwargs):
 		pass
-	def connect(self, **kwargs):
-		if 'game' in kwargs: game=kwargs['game']
-		else: game = self.owner.game
-		game.dp.connect(self.trigger, signal=self.signal)
-	def disconnect(self, **kwargs):
-		if 'game' in kwargs: game=kwargs['game']
-		else: game = self.owner.game
-		game.dp.connect(self.trigger, signal=self.signal)
+	def condition(self, **kwargs):
+		return True
 		
 class Attack(object):
 	def __init__(self, game, **kwargs):
 		self.types.append('ATTACK')
-		
+	
+"""
+	
 class Duration(object):
 	def __init__(self, game, **kwargs):
 		self.types.append('DURATION')
@@ -747,6 +744,8 @@ class Traveler(CardAdd):
 	def onPileCreate(self, pile, game, **kwargs):
 		super(Traveler, self).onPileCreate(pile, game, **kwargs)
 		game.require(self.morph)
-		
+	
+"""
+	
 if __name__=='__main__':
 	random.seed()
