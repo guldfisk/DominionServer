@@ -54,6 +54,7 @@ class OnlinePlayer(server.CST):
 		self.playerName = 'p'+str(server.idcnt)
 		self.defaultRecvLen = 4
 		self.player = None
+		self.indents = []
 	def linkPlayer(self, player):
 		self.player = player
 		player.oplayer = self
@@ -70,7 +71,11 @@ class OnlinePlayer(server.CST):
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
 	def sendPayload(self, head, payload):
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
-	def makeGame(self, allCards=False, **kwargs):
+	def evLogger(self, signal, **kwargs):
+		if signal[-6:]=='_begin': self.indents.append(signal[:-6])
+		elif signal in self.indents: self.indents.remove(signal)
+		print('>'+'|\t'*len(self.indents)+signal+':: '+str(list(kwargs)))
+	def makeGame(self, allCards=False, printEvents=False, **kwargs):
 		players = []
 		for key in server.csts:
 			if server.csts[key].player==None:
@@ -84,17 +89,18 @@ class OnlinePlayer(server.CST):
 		for player in game.players:	player.game = game
 		game.makePiles(baseSetBase)
 		#options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands+empires
+		options = baseSet+seaside+darkages
 		#allEvents = adventuresEvents
 		if allCards:
-			pass
-			#options = empires+baseSet
-			#game.makePiles(options)
+			#options = baseSet
+			game.makePiles(options)
 			#game.makeEvents(allEvents)
 		else:
 			game.makeEvents(random.sample(allEvents, random.randint(0, 2)))
 			piles = random.sample(empires, 2)
 			piles += random.sample([o for o in options if not o in piles], 8)
 			game.makePiles(piles)
+		if printEvents: game.dp.connect(self.evLogger)
 		game.makeStartDeck()
 		gT = traa(game.start)
 		gT.start()
@@ -107,6 +113,8 @@ class OnlinePlayer(server.CST):
 			self.makeGame()
 		elif streng=='test':
 			self.makeGame(True)
+		elif streng=='debu':
+			self.makeGame(True, True)
 		elif streng=='requ':
 			self.channelOutFunc(self.request(self.recvLen(4).decode('UTF-8')), 'resp', False)
 		elif streng=='reco':
@@ -127,12 +135,12 @@ class OnlinePlayer(server.CST):
 		else: return len(options)-1
 	
 if __name__=='__main__':
+	random.seed()
 	HOST = str(socket.gethostbyname(socket.gethostname()))
-	print(HOST)
 	PORT = 6700
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.bind(('', PORT))
-	print("rec at "+str(PORT))
+	print(HOST+' rec at '+str(PORT))
 	s.listen(1)
 	ct = server.clientThread(s, OnlinePlayer)
 	ct.start()
