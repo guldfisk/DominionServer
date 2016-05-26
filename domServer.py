@@ -72,6 +72,7 @@ class OnlinePlayer(server.CST):
 	def sendPayload(self, head, payload):
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
 	def evLogger(self, signal, **kwargs):
+		if len(signal)>16 and signal[:16]=='AccessAttribute_': return
 		if signal[-6:]=='_begin': self.indents.append(signal[:-6])
 		elif signal in self.indents: self.indents.remove(signal)
 		print('>'+'|\t'*len(self.indents)+signal+':: '+str(list(kwargs)))
@@ -89,7 +90,7 @@ class OnlinePlayer(server.CST):
 		for player in game.players:	player.game = game
 		game.makePiles(baseSetBase)
 		#options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands+empires
-		options = baseSet+seaside+darkages
+		options = baseSet+seaside+darkages+adventures
 		#allEvents = adventuresEvents
 		if allCards:
 			#options = baseSet

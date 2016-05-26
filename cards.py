@@ -301,7 +301,7 @@ class ThroneRoom(Action):
 			if 'ACTION' in card.types:
 				options.append(card)
 		if not options: return
-		choice = player.user([o.view for o in options], 'Choose action')
+		choice = player.user([o.view() for o in options], 'Choose action')
 		if not player.resolveEvent(CastCard, card=options[choice]): return
 		self.links.append(options[choice])
 		player.resolveEvent(PlayCard, card=options[choice])
@@ -871,6 +871,59 @@ class Wharf(Action, Duration):
 		
 seaside = [Embargo, Haven, Lighthouse, NativeVillage, PearlDiver, Ambassador, FishingVillage, Lookout, Smugglers, Caravan, Cutpurse, Island, Navigator, PirateShip, Salvager, SeaHag, TreasureMap, Bazaar, Explorer, GhostShip, MerchantShip, Outpost, Tactician, Treasury, Wharf]
 
+class Fortress(Action):
+	name = 'Fortress'
+	def __init__(self, session, **kwargs):
+		super(Fortress, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+		self.connectCondition(Replacement, trigger='Trash', source=self.card, resolve=self.resolveTrash, condition=self.conditionTrash)
+	def onPlay(self, player, **kwargs):
+		super(Fortress, self).onPlay(player, **kwargs)
+		player.resolveEvent(Draw)
+		player.resolveEvent(AddAction, amnt=2)
+	def conditionTrash(self, **kwargs):
+		return kwargs['card']==self.card
+	def resolveTrash(self, event, **kwargs):
+		trashedCard = event.spawnClone().resolve()
+		card =  event.player.resolveEvent(MoveCard, frm=self.session.trash, to=event.player.hand, card=self.card)
+		if card: card.setOwner(event.player)
+		return trashedCard
+	
+class Procession(Action):
+	name = 'Procession'
+	def __init__(self, session, **kwargs):
+		super(Procession, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+		self.links = []
+		self.connectCondition(Replacement, trigger='Destroy', source=self.card, resolve=self.resolveDestroy, condition=self.conditionDestroy)
+		self.connectCondition(Replacement, trigger='MoveCard', source=self.card, resolve=self.resolveMoveLink, condition=self.conditionMoveLink)
+	def onPlay(self, player, **kwargs):
+		super(Procession, self).onPlay(player, **kwargs)
+		self.links = []
+		options = []
+		for card in player.hand:
+			if 'ACTION' in card.types:
+				options.append(card)
+		if not options: return
+		card =  options[player.user([o.view() for o in options], 'Choose action')]
+		if not player.resolveEvent(CastCard, card=card): return
+		self.links.append(card)
+		player.resolveEvent(PlayCard, card=card)
+		player.resolveEvent(Trash, frm=player.inPlay, card=card)
+		player.gainCosting(1, card=card, restriction=lambda o: 'ACTION' in o.types)
+	def conditionDestroy(self, **kwargs):
+		return self.owner and self.card in self.owner.inPlay
+	def resolveDestroy(self, event, **kwargs):
+		if event.card==self.card and self.links: return
+		if event.card in self.links: self.links.remove(event.card)
+		if not self.links: event.spawn(Destroy, card=self.card).resolve()
+		return event.spawnClone().resolve()
+	def conditionMoveLink(self, **kwargs):
+		return self.owner and kwargs['player']==self.owner and kwargs['card'] in self.links and kwargs['frm']==self.owner.inPlay
+	def resolveMoveLink(self, event, **kwargs):
+		self.links.remove(event.card)
+		return event.spawnClone().resolve()
+	
 class BandOfMisfits(Action):
 	name = 'Band of Misfits'
 	def __init__(self, session, **kwargs):
@@ -878,10 +931,10 @@ class BandOfMisfits(Action):
 		self.coinPrice.set(5)
 		self.connectCondition(Replacement, trigger='CastCard', source=self.card, resolve=self.resolveCast, condition=self.conditionCast)
 	def conditionMove(self, **kwargs):
-		return kwargs['Card']==self.card and kwargs['frm']==self.owner.inPlay and kwargs['to']!=self.owner.inPlay
+		return kwargs['card']==self.card and kwargs['frm']==self.owner.inPlay and kwargs['to']!=self.owner.inPlay
 	def resolveMove(self, event, **kwargs):
-		self.disconnect()
-		self.card.currentValues = makeCard(self.session, BandOfMisfits)
+		self.card.disconnect()
+		self.card.currentValues = BandOfMisfits(self.session, card=self.card)
 		self.card.setOwner(self.owner)
 		return event.spawnClone().resolve()
 	def conditionCast(self, **kwargs):
@@ -890,16 +943,34 @@ class BandOfMisfits(Action):
 		pile = self.owner.pileCostingLess(card=self.card, restriction = lambda o: 'ACTION' in o.types)
 		if not pile: return event.spawnClone().resolve()
 		self.disconnect()
-		print(self.card, self.card.currentValues, pile.viewTop(), type(pile.viewTop()))
-		print(makeCard(self.session, type(pile.viewTop())))
-		self.card.currentValues = makeCard(self.session, type(pile.viewTop().currentValues))
-		print(self.card, self.card.currentValues)
+		self.card.currentValues = type(pile.viewTop().currentValues)(self.session, card=self.card)
 		self.card.setOwner(self.owner)
 		self.card.connectCondition(Replacement, trigger='MoveCard', source=self.card, resolve=self.resolveMove, condition=self.conditionMove)
 		self.card.view = self.view
 		return event.spawnClone().resolve()
 	def view(self, **kwargs):
-		if not self.name==BandOfMisfits.name: return BandOfMisfits.name+'('+self.name+')'
-		return self.name
+		if not self.card.name==BandOfMisfits.name: return BandOfMisfits.name+'('+self.card.name+')'
+		return self.card.name
 		
-darkages = [BandOfMisfits]
+darkages = [Fortress, Procession, BandOfMisfits]
+
+class Ratcatcher(Action, Reserve):
+	name = 'Ratcatcher'
+	def __init__(self, session, **kwargs):
+		super(Ratcatcher, self).__init__(session, **kwargs)
+		self.triggerSignal = 'startTurn'
+		Reserve.__init__(self, session, **kwargs)
+		self.coinPrice.set(2)
+	def onPlay(self, player, **kwargs):
+		super(Ratcatcher, self).onPlay(player, **kwargs)
+		Reserve.onPlay(self, player, **kwargs)
+		player.resolveEvent(AddAction)
+		player.resolveEvent(Draw)
+	def call(self, **kwargs):
+		card = self.owner.selectCard(canBreak=False)
+		if card: self.owner.resolveEvent(Trash, frm=self.owner.hand, card=card)
+	def onPileCreate(self, pile, session, **kwargs):
+		super(Ratcatcher, self).onPileCreate(pile, session, **kwargs)
+		Reserve.onPileCreate(self, pile, session, **kwargs)
+		
+adventures = [Ratcatcher]

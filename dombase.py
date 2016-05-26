@@ -37,8 +37,8 @@ class CPile(list):
 def gN(ob):
 	if hasattr(ob, 'playerName'): return ob.playerName
 	elif hasattr(ob, 'view'): return ob.view()
-	elif hasattr(ob, 'getView'): return ob.getView()
 	elif hasattr(ob, 'name'): return ob.name
+	elif hasattr(ob, 'getView'): return ob.getView()
 	else: return str(ob)
 	
 def testUser(options):
@@ -74,6 +74,7 @@ class Game(EventSession):
 		self.replaceOrder = self.rReplaceOrder
 		self.orderTriggers = self.rOrderTriggers
 		self.endCondition = self.checkGameEnd
+		self.eventCleanup = self.evClean
 	def pilesView(self, player):
 		ud = ''
 		for key in sorted(self.piles): ud += self.piles[key].getView()+', '
@@ -94,6 +95,8 @@ class Game(EventSession):
 		self.NSPiles[card.name] = Pile(card, self)
 	def evLogger(self, signal, **kwargs):
 		self.events.append((signal, kwargs))
+	def evClean(self):
+		self.resolveTriggerQueue()
 	def start(self, **kwargs):
 		self.running = True
 		self.round = 0
@@ -180,17 +183,15 @@ class Game(EventSession):
 		return ud
 	def makeStartDeck(self):
 		for player in self.players:
-			for i in range(7): self.resolveEvent(GainFromPile, frm=self.piles['Band of Misfits'], player=player)
-			for i in range(3): self.resolveEvent(GainFromPile, frm=self.piles['Throne Room'], player=player)
+			for i in range(1): self.resolveEvent(GainFromPile, frm=self.piles['Band of Misfits'], player=player)
+			for i in range(2): self.resolveEvent(GainFromPile, frm=self.piles['Procession'], player=player)
 			#for i in range(2): self.resolveEvent(GainFromPile, frm=self.piles['Fishing Village'], player=player)
 	def rReplaceOrder(self, options):
-		print('----------------------> REPLACE ORDER <-------------------------')
 		for player in self.getPlayers(self.activePlayer):
 			for o in options: print(o.source)
 			os = [o for o in options if o.source.owner==player]
 			if not os: continue
 			return options.index(os[player.user([o.source.view() for o in os], 'Choose replacement')])
-		print('---------------------->  REPLACE DONE  <-------------------------')
 		return 0
 	def rOrderTriggers(self, options):
 		aoptions = copy.copy(options)
@@ -279,7 +280,7 @@ class Player(object):
 			if not (key in keyBlackList or (hidden and hidden!=self and key in censored) or (key=='card' and 'to' in kwargs and 'frm' in kwargs and not kwargs['to'].canSee(self) and not kwargs['frm'].canSee(self))): s[1][key] = gN(kwargs[key])
 		if signal=='globalSetup': s[1]['you'] = self.name
 		self.channelOut(s)
-		#self.updateUI()
+		#self.updateUI()0
 	def getView(self):
 		return 'Hand: '+self.hand.getFullView()+'\nIn Play: '+self.inPlay.getView()+'\nDiscard: '+self.discardPile.getView()+'\nLibrary: '+self.library.getView()+'\nCoins: '+str(self.coins)+'\tActions: '+str(self.actions)+'\tBuys: '+str(self.buys)
 	def setup(self, session, **kwargs):
@@ -403,8 +404,25 @@ class Player(object):
 			if choice+1>len(options): return
 		else: choice = self.user(options, 'Choose pile')
 		return self.session.piles[options[choice]]
+	def pileCosting(self, coins=0, potions=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
+		if card:
+			coins += card.coinPrice.access()
+			potions += card.potionPrice.access()
+			debt += card.debtPrice.access()
+		options = []
+		for key in self.session.piles:
+			if self.session.piles[key].viewTop() and self.session.piles[key].viewTop().costEqualTo(coins, potions, debt) and not (restriction and not restriction(self.session.piles[key].viewTop())): options.append(key)
+		if not options: return
+		if optional:
+			choice = self.user(options+['No pile'], 'Choose pile')
+			if choice+1>len(options): return
+		else: choice = self.user(options, 'Choose pile')
+		return self.session.piles[options[choice]]
 	def gainCostingLessThan(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
 		pile = self.pileCostingLess(coin, potion, debt, card, optional, restriction, **kwargs)
+		if pile: self.resolveEvent(GainFromPile, frm=pile)
+	def gainCosting(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
+		pile = self.pileCosting(coin, potion, debt, card, optional, restriction, **kwargs)
 		if pile: self.resolveEvent(GainFromPile, frm=pile)
 	#def buyEvent(self, event, **kwargs):
 	#	if self.debt>0: return
@@ -538,6 +556,7 @@ class BaseCard(WithPAs):
 		self.session = session
 		self.connectedConditions = []
 		self.card = kwargs.get('card', None)
+		self.name = kwargs.get('name', self.name)
 	def onPileCreate(self, pile, session, **kwargs):
 		for i in range(10): pile.append(makeCard(session, type(self)))
 	def onPlay(self, player, **kwargs):
@@ -651,18 +670,14 @@ class Duration(object):
 		name = 'DurationTrigger'
 		defaultTrigger = 'startTurn'
 		def condition(self, **kwargs):
-			print('CONDITION')
-			print(kwargs['player'], self.source, self.source.owner)
 			return kwargs['player']==self.source.owner
 		def resolve(self, **kwargs):
-			print('RESOLVE')
 			self.source.owner.resolveEvent(ResolveDuration, card=self.source)	
 	def __init__(self, session, **kwargs):
 		if not hasattr(self, 'types'): self.types = []
 		self.types.append('DURATION')
 		self.connectCondition(Replacement, trigger='Destroy', source=self, resolve=self.resolveDestroy, condition=self.conditionDestroy)
 	def onPlay(self, player, **kwargs):
-		print('DURATION ONPLAY')
 		self.session.connectCondition(self.DurationTrigger, source=self)
 	def conditionDestroy(self, **kwargs):
 		if not kwargs['card']==self.card: return False
@@ -673,35 +688,28 @@ class Duration(object):
 		return
 	def duration(self, **kwargs):
 		pass
-		
-"""
-	
-class Reserve(CardAdd):
+			
+class Reserve(object):
+	triggerSignal = ''
 	def __init__(self, session, **kwargs):
 		self.types.append('RESERVE')
-		self.triggerSignal = ''
+		self.connectCondition(Trigger, trigger=self.triggerSignal, source=self, resolve=self.resolveCall, condition=self.conditionCall)
 	def onPlay(self, player, **kwargs):
-		for i in range(len(player.inPlay)):
-			if player.inPlay[i]==self:
-				player.mats['Tavern'].append(player.inPlay.pop(i))
-				break
-		player.session.dp.connect(self.trigger, signal=self.triggerSignal)
-	def requirements(self, **kwargs):
-		return self.owner==kwargs['player']
-	def trigger(self, signal, **kwargs):
-		if not (self.requirements(**kwargs) and self.owner.user(('no', 'yes'), 'Call '+self.name)): return
-		for i in range(len(self.owner.mats['Tavern'])):
-			if self.owner.mats['Tavern'][i]==self:
-				self.owner.inPlay.append(self.owner.mats['Tavern'].pop(i))
-				self.owner.session.dp.disconnect(self.trigger, signal=self.triggerSignal)
-				self.call(signal, **kwargs)
-				return
-	def call(self, signal, **kwargs):
-		self.owner.session.dp.send(signal='call', card=self)
+		player.resolveEvent(MoveCard, frm=player.inPlay, to=player.mats['Tavern'], card=self.card)
+	def callRestriction(self, **kwargs):
+		return kwargs['player']==self.owner
+	def conditionCall(self, **kwargs):
+		return self.owner and self.card in self.owner.mats['Tavern'] and self.callRestriction(**kwargs)
+	def resolveCall(self, **kwargs):
+		if self.owner.user(('yes', 'no'), 'Call '+self.view()): return
+		self.owner.resolveEvent(MoveCard, frm=self.owner.mats['Tavern'], to=self.owner.inPlay, card=self.card)
+		self.call(**kwargs)
+	def call(self, **kwargs):
+		pass
 	def onPileCreate(self, pile, session, **kwargs):
-		super(Reserve, self).onPileCreate(pile, session, **kwargs)
 		session.addMat('Tavern')
-		
+
+"""		
 class Traveler(CardAdd):
 	def __init__(self, session, **kwargs):
 		self.types.append('TRAVELER')
