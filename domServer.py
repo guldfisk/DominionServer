@@ -1,7 +1,8 @@
 import sys
 import server
 from cards import *
-from events import *
+from devents import *
+from landmarks import *
 import pickle
 import threading
 import struct
@@ -90,16 +91,19 @@ class OnlinePlayer(server.CST):
 		for player in game.players:	player.game = game
 		game.makePiles(baseSetBase)
 		#options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands+empires
-		options = baseSet+seaside+darkages+adventures
-		#allEvents = adventuresEvents
+		options = baseSet+seaside+darkages+adventures+alchemy+empires
+		allDEvents = adventuresDEvents
+		landmarks = empiresLandmarks
 		if allCards:
-			#options = baseSet
+			options += testCards
 			game.makePiles(options)
-			#game.makeEvents(allEvents)
+			game.makeDEvents(allDEvents)
+			game.makeLandmarks(landmarks)
 		else:
-			game.makeEvents(random.sample(allEvents, random.randint(0, 2)))
-			piles = random.sample(empires, 2)
-			piles += random.sample([o for o in options if not o in piles], 8)
+			game.makeDEvents(random.sample(allDEvents, random.randint(0, 2)))
+			game.makeLandmarks(random.sample(landmarks, random.randint(0, 2)))
+			#piles = random.sample(empires, 2)
+			piles = random.sample(options, 10)
 			game.makePiles(piles)
 		if printEvents: game.dp.connect(self.evLogger)
 		game.makeStartDeck()

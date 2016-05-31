@@ -2,8 +2,19 @@ from pydispatch import dispatcher as dp
 import re
 import math as m
 import copy
+import types
 from Events import *
 
+class Log(object):
+	def __init__(self, **kwargs):
+		self.out = open('log.log', 'a')
+	def log(self, *args, end='\n'):
+		for arg in args:
+			self.out.write(str(arg))
+		self.out.write(end)
+
+l = Log()
+			
 class CPile(list):
 	def __init__(self, *args, **kwargs):
 		super(CPile, self).__init__(*args)
@@ -61,6 +72,7 @@ class Game(EventSession):
 		self.piles = {}
 		self.NSPiles = {}
 		self.eventSupply = {}
+		self.landmarks = {}
 		self.activePlayer = None
 		self.globalMats = {}
 		self.emptyPiles = []
@@ -74,18 +86,21 @@ class Game(EventSession):
 		self.replaceOrder = self.rReplaceOrder
 		self.orderTriggers = self.rOrderTriggers
 		self.endCondition = self.checkGameEnd
-		self.eventCleanup = self.evClean
 	def pilesView(self, player):
 		ud = ''
 		for key in sorted(self.piles): ud += self.piles[key].getView()+', '
 		return ud
 	def eventsView(self, player):
 		ud = ''
-		for key in sorted(self.eventSupply): ud+=key+' '+str(self.eventSupply[key].coinPrice.access())+'$, '
+		for key in sorted(self.eventSupply): ud += self.eventSupply[key].view()+', '
+		return ud
+	def landmarksView(self, player):
+		ud = ''
+		for key in sorted(self.landmarks): ud += self.landmarks[key].view()+', '
 		return ud
 	def NSPilesView(self, player):
 		ud = ''
-		for key in sorted(self.NSPiles): ud+=key+' '+str(self.NSPiles[key].maskot.coinPrice.access())+'$: '+str(len(self.NSPiles[key]))+', '
+		for key in sorted(self.NSPiles): ud += self.NSPiles[key].getView()+', '
 		return ud
 	def requirePile(self, card, **kwargs):
 		if card.name in list(self.piles): return
@@ -154,6 +169,13 @@ class Game(EventSession):
 				while self.players[n]!=cplayer:
 					yield self.players[n]
 					n=(n+1)%len(self.players)
+	def getOtherPlayers(self, cplayer):
+		for i in range(len(self.players)):
+			if self.players[i]==cplayer:
+				n=(i+1)%len(self.players)
+				while self.players[n]!=cplayer:
+					yield self.players[n]
+					n=(n+1)%len(self.players)
 	def addGlobalMat(self, name):
 		if not name in list(self.globalMats): self.globalMats[name] = []
 	def addMat(self, name, **kwargs):
@@ -161,7 +183,7 @@ class Game(EventSession):
 			if not name in list(player.mats): player.mats[name] = CPile(name=name, owner=player, **kwargs)
 	def addToken(self, token):
 		for player in self.players:
-			if not token.name in list(player.tokens): player.tokens[token.name] = token(self, playerOwner=player)
+			if not token.name in player.tokens: self.resolveEvent(MakeToken, token=token(self), player=player)
 	def checkGameEnd(self):
 		emptyPiles = 0
 		for pile in self.piles:
@@ -174,21 +196,22 @@ class Game(EventSession):
 	def makePiles(self, cards):
 		for card in cards:
 			self.piles[card.name] = Pile(card, self)
-	def makeEvents(self, events):
-		for event in events:
-			self.eventSupply[event.name] = event(self)
+	def makeDEvents(self, events):
+		for event in events: self.eventSupply[event.name] = event(self)
+	def makeLandmarks(self, landmarks):
+		for landmark in landmarks: self.landmarks[landmark.name] = landmark(self)
 	def getPilesView(self):
 		ud = ''
 		for pile in self.piles: ud+=self.piles[pile].getView()+', '
 		return ud
 	def makeStartDeck(self):
 		for player in self.players:
-			for i in range(1): self.resolveEvent(GainFromPile, frm=self.piles['Band of Misfits'], player=player)
-			for i in range(2): self.resolveEvent(GainFromPile, frm=self.piles['Procession'], player=player)
-			#for i in range(2): self.resolveEvent(GainFromPile, frm=self.piles['Fishing Village'], player=player)
+			for i in range(7): self.resolveEvent(TakeFromPile, frm=self.piles['Copper'], player=player)
+			for i in range(3): self.resolveEvent(TakeFromPile, frm=self.piles['Estate'], player=player)
+			#for i in range(2): self.resolveEvent(GainFromPile, frm=self.piles['Estate'], player=player)
+			#for i in range(2): self.resolveEvent(GainFromPile, frm=self.NSPiles['Teacher'], player=player)
 	def rReplaceOrder(self, options):
 		for player in self.getPlayers(self.activePlayer):
-			for o in options: print(o.source)
 			os = [o for o in options if o.source.owner==player]
 			if not os: continue
 			return options.index(os[player.user([o.source.view() for o in os], 'Choose replacement')])
@@ -227,6 +250,7 @@ class Player(object):
 		self.minusCoin = False
 		self.minusDraw = False
 		self.owner = self
+		self.owns = CPile(name='owns', owner=self)
 	def view(self, **kwargs):
 		return self.name
 	def resolveEvent(self, event, **kwargs):
@@ -244,7 +268,7 @@ class Player(object):
 			for key in sorted(self.session.eventSupply): ud+=key+' '+str(self.session.eventSupply[key].coinPrice.access())+'$, '
 			return ud
 	def getStatView(self):
-		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+'\tJourney: '+str(self.journey)+'\nCoins: '+str(self.coins)+', Buys: '+str(self.buys)+', Potions: '+str(self.potions)+', Debt: '+str(self.debt)+'\nMinus Coin: '+str(self.minusCoin)+'\tMinus Draw: '+str(self.minusDraw)
+		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+', VP: '+str(self.victories)+', Journey: '+str(self.journey)+'\n$: '+str(self.coins)+', Buys: '+str(self.buys)+', P: '+str(self.potions)+', D: '+str(self.debt)+'\n-Coin: '+str(self.minusCoin)+'\t-Draw: '+str(self.minusDraw)
 	def getOpponentView(self, player, **kwargs):
 		return self.inPlay.getView(), self.getStatView(), self.discardPile.getView(), self.matsView(player)
 	def updateUI(self):
@@ -256,7 +280,7 @@ class Player(object):
 		self.uiupdate('tras', 'nnnn', self.session.trash.getView())
 		self.uiupdate('play', 'stat', self.getStatView())
 		self.uiupdate('king', 'pile', self.session.pilesView(self))
-		self.uiupdate('king', 'even', self.session.eventsView(self))
+		self.uiupdate('king', 'even', self.session.eventsView(self)+'\n'+self.session.landmarksView(self))
 		self.uiupdate('king', 'nspi', self.session.NSPilesView(self))
 		if not self==self.session.activePlayer and self.session.activePlayer: oppoV=self.session.activePlayer.getOpponentView()
 		else: oppoV = self.session.getPreviousPlayer(self).getOpponentView(self)
@@ -266,9 +290,10 @@ class Player(object):
 		self.uiupdate('oppo', 'mats', oppoV[3])
 	def toPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
-		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'Buy', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard']
-		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded']
+		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'Take']
+		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd']
 		keyBlackList = ['signal', 'source', 'session', 'hasReplaced', 'hidden', 'censored']
+		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner']
 		if signal in whiteList: s = [signal, {}]
 		elif signal[-6:]=='_begin' and signal[:-6] in eventWhiteList: s = [signal[:-6], {}]
 		else: return
@@ -277,7 +302,7 @@ class Player(object):
 		if 'hidden' in kwargs: hidden = kwargs['hidden']
 		if 'censored' in kwargs: censored = kwargs['censored']
 		for key in kwargs:
-			if not (key in keyBlackList or (hidden and hidden!=self and key in censored) or (key=='card' and 'to' in kwargs and 'frm' in kwargs and not kwargs['to'].canSee(self) and not kwargs['frm'].canSee(self))): s[1][key] = gN(kwargs[key])
+			if key in keyWhiteList and not (key in keyBlackList or (hidden and hidden!=self and key in censored) or (key=='card' and 'to' in kwargs and 'frm' in kwargs and not kwargs['to'].canSee(self) and not kwargs['frm'].canSee(self))): s[1][key] = gN(kwargs[key])
 		if signal=='globalSetup': s[1]['you'] = self.name
 		self.channelOut(s)
 		#self.updateUI()0
@@ -338,7 +363,7 @@ class Player(object):
 			choice = self.user(pileList+list(self.session.eventSupply)+['EndBuyPhase'], 'buySelection')
 			if choice+1>len(self.session.piles)+len(self.session.eventSupply): break
 			elif choice<len(self.session.piles): self.session.resolveEvent(PurchaseFromPile, frm=self.session.piles[pileList[choice]], player=self)
-			else: self.buyEvent(self.session.eventSupply[list(self.session.eventSupply)[choice-len(self.session.piles)]])
+			else: self.resolveEvent(PurchaseDEvent, card=self.session.eventSupply[list(self.session.eventSupply)[choice-len(self.session.piles)]])
 			self.session.resolveTriggerQueue()
 		if self.debt>0: self.resolveEvent(PayDebt)
 	def destroyAll(self, **kwargs):
@@ -352,6 +377,7 @@ class Player(object):
 		self.buys = 1
 	def endTurn(self, **kwargs):
 		self.session.dp.send(signal='endTurn', player=self)
+		self.session.resolveTriggerQueue()
 		self.discardHand()
 		self.destroyAll()
 		self.session.resolveEvent(DrawCards, amnt=self.eotdraw, player=self)
@@ -362,12 +388,14 @@ class Player(object):
 	def endGame(self, **kwargs):
 		self.discardHand()
 		self.destroyAll()
-		for key in self.mats:
-			for i in range(len(self.mats[key])-1, -1, -1):
-				if isinstance(self.mats[key][i], Card): self.library.append(self.mats[key].pop(i))
-		self.resolveEvent(Reshuffle)
-		for card in self.library:
-			card.onGameEnd(self)
+		for card in self.owns: card.onGameEnd(self)
+		for key in self.session.landmarks: self.session.landmarks[key].onGameEnd(self)
+		#for key in self.mats:
+		#	for i in range(len(self.mats[key])-1, -1, -1):
+		#		if isinstance(self.mats[key][i], Card): self.library.append(self.mats[key].pop(i))
+		#self.resolveEvent(Reshuffle)
+		#for card in self.library:
+		#	card.onGameEnd(self)
 	def sessionEnd(self, **kwargs):
 		self.session = None
 	def selectCards(self, amnt, frm=None, canBreak=True, message='Choose cards', **kwargs):
@@ -390,6 +418,16 @@ class Player(object):
 			if choice+1>len(frm): return
 		else: choice = self.user([o.view() for o in frm], message)
 		return frm[choice]
+	def getPile(self, optional=False, restriction=None, **kwargs):
+		options = []
+		for key in self.session.piles:
+			if self.session.piles[key].viewTop() and not (restriction and not restriction(self.session.piles[key].viewTop())): options.append(key)
+		if not options: return
+		if optional:
+			choice = self.user(options+['No pile'], 'Choose pile')
+			if choice+1>len(options): return
+		else: choice = self.user(options, 'Choose pile')
+		return self.session.piles[options[choice]]
 	def pileCostingLess(self, coins=0, potions=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
 		if card:
 			coins += card.coinPrice.access()
@@ -424,14 +462,9 @@ class Player(object):
 	def gainCosting(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
 		pile = self.pileCosting(coin, potion, debt, card, optional, restriction, **kwargs)
 		if pile: self.resolveEvent(GainFromPile, frm=pile)
-	#def buyEvent(self, event, **kwargs):
-	#	if self.debt>0: return
-	#	if self.buys>0 and event.coinPrice.access()<=self.coins and event.getPotionPrice(self)<=self.potions and not self.session.dp.send(signal='tryBuyEvent', player=self, event=event):
-	#		self.session.dp.send(signal='buyEvent', player=self, event=event)
-	#		self.buys -= 1
-	#		self.coins -= event.coinPrice.access()
-	#		self.potions -= event.getPotionPrice(self)
-	#		event.onBuy(self)
+	def gain(self, optional=False, restriction=False, **kwargs):
+		pile = self.getPile(optional, restriction, **kwargs)
+		if pile: self.resolveEvent(GainFromPile, frm=pile)
 	
 class Token(object):
 	name = 'baseToken'
@@ -453,7 +486,8 @@ class Pile(CPile):
 		super(Pile, self).__init__(*args, **kwargs)
 		self.session = session
 		self.cardType = cardType
-		self.maskot = cardType(session)
+		self.maskot = self.associateCard(cardType)
+		self.maskot.disconnect()
 		self.terminator = kwargs.get('terminator', False)
 		self.maskot.onPileCreate(self, session)
 		self.name = self.maskot.name
@@ -476,6 +510,12 @@ class Pile(CPile):
 		ud += ': '+str(len(self))
 		if self.tokens: ud += ' ('+self.tokens.getFullView()+')'
 		return ud
+	def associateCard(self, tp, **kwargs):
+		card = makeCard(self.session, tp, **kwargs)
+		card.frmPile = self
+		return card
+	def addCard(self, tp, **kwargs):
+		self.append(self.associateCard(tp, **kwargs))
 	def addToken(self, token, session, **kwargs):
 		session.dp.send(signal='addToken', pile=self, token=token)
 		token.owner = self
@@ -492,46 +532,15 @@ class Pile(CPile):
 		session.dp.send(signal='removeToken', pile=self, token=token)
 		token.onLeavePile(self)
 		token.owner = None
-
-"""		
-class CardAdd(object):
-	def onPileCreate(self, pile, session, **kwargs):
-		for i in range(10):
-			pile.append(type(self)(session))
-	def coinPrice.access():
-		return np.max((self.price, 0))
-	def getPotionPrice(self, player, **kwargs):
-		return np.max((self.potionPrice, 0))
-	def getDebtPrice(self, player, **kwargs):
-		return np.max((self.debtPrice, 0))
-	def view(self, **kwargs):
-		return self.name
-	def onPlay(self, player, **kwargs):
-		pass
-	def onDestroy(self, player, **kwargs):
-		pass
-	def onGain(self, player, **kwargs):
-		pass
-	def onTrash(self, player, **kwargs):
-		pass
-	def onGameEnd(self, player, **kwargs):
-		pass
-	def onReturn(self, player, **kwargs):
-		pass
-	def onDiscard(self, player, **kwargs):
-		pass
-	def onLeavePlay(self, player, **kwargs):
-		pass
-"""
-	
-class WithTypes(object):
-	def __init__(self, **kwargs):
-		if not hasattr(self, 'types'): self.types = []
-	
+		
 class Card(object):
 	def __init__(self, obj=None, **kwargs):
 		self.currentValues = obj
 		self.printedValues = obj
+		self.frmPile = None
+		self.owner = None
+	def setOwner(self, owner, **kwargs):
+		self.owner = owner
 	def setValues(self, values):
 		self.currentValues = values
 		self.printedValues = values
@@ -548,25 +557,27 @@ def makeCard(session, tp, **kwargs):
 class BaseCard(WithPAs):
 	ame = 'BaseCard'
 	def __init__(self, session, **kwargs):
-		if not hasattr(self, 'types'): self.types = []
+		self.card = kwargs.get('card', None)
+		if not hasattr(self, 'types'): self.types = set()
 		self.coinPrice = self.PA('coinPrice', kwargs.get('price', 0))
 		self.potionPrice = self.PA('potionPrice', kwargs.get('potionPrice', 0))
 		self.debtPrice = self.PA('potionPrice', kwargs.get('debtPrice', 0))
-		self.owner = None
+		#self.owner = None
 		self.session = session
 		self.connectedConditions = []
-		self.card = kwargs.get('card', None)
 		self.name = kwargs.get('name', self.name)
 	def onPileCreate(self, pile, session, **kwargs):
-		for i in range(10): pile.append(makeCard(session, type(self)))
+		for i in range(10): pile.addCard(type(self))
+	def __getattr__(self, attr):
+		if attr in self.__dict__: return getattr(self, attr)
+		elif self.__dict__['card'] and attr in self.__dict__['card'].__dict__: return getattr(self.card, attr)
+		else: raise AttributeError(attr)
 	def onPlay(self, player, **kwargs):
 		pass
 	def onGameEnd(self, player, **kwargs):
 		pass
 	def disconnect(self, **kwargs):
 		while self.connectedConditions: self.session.disconnectCondition(self.connectedConditions.pop())
-	def setOwner(self, owner, **kwargs):
-		self.owner = owner
 	def view(self, **kwargs):
 		return self.name
 	def connectCondition(self, tp, **kwargs):
@@ -591,72 +602,87 @@ class BaseCard(WithPAs):
 			debt = card.debtPrice.access()
 		return self.coinPrice.access()==coins and self.potionPrice.access()==potions and self.debtPrice.access()==debt
 	
-class DEvent(object):
+class DEvent(WithPAs):
 	name = 'BaseDEvent'
 	def __init__(self, session, **kwargs):
-		self.price = kwargs.get('price', 0)
-		self.potionPrice = kwargs.get('potionPrice', 0)
+		self.coinPrice = self.PA('coinPrice', kwargs.get('price', 0))
+		self.potionPrice = self.PA('potionPrice', kwargs.get('potionPrice', 0))
+		self.debtPrice = self.PA('potionPrice', kwargs.get('debtPrice', 0))
 		self.session = session
+	def view(self, **kwargs):
+		ud = self.name+' '+str(self.coinPrice.access())+'$'
+		potions = self.potionPrice.access()
+		debt = self.debtPrice.access()
+		if potions: ud += str(potions)+'P'
+		if debt: ud += str(debt)+'D'
+		return ud
 	def onBuy(self, player, **kwargs):
 		pass
 	def checkBefore(self, player, **kwargs):
-		plays = 0
 		for i in range(len(player.session.events)-1, -1, -1):
-			if player.session.events[i][0]=='buyEvent' and player.session.events[i][1]['event'].name==self.name:
-				plays += 1
-				if plays>1: return False
+			if player.session.events[i][0]=='BuyDEvent' and player.session.events[i][1]['card'].name==self.name: return False
 			elif player.session.events[i][0]=='startTurn': break
 		return True
-	#def coinPrice.access():
-	#	return np.max((self.price, 0))
-	def getPotionPrice(self, player, **kwargs):
-		return np.max((self.potionPrice, 0))
+
+class Landmark(WithPAs):
+	name = 'BaseLandmark'
+	def __init__(self, session, **kwargs):
+		self.session = session
+		self.tokens = CPile(name='tokens')
+		self.owner = None
+	def view(self, **kwargs):
+		if self.tokens: return self.name+'('+self.tokens.getView()+')'
+		else: return self.name
+	def onGameEnd(self, player, **kwargs):
+		pass
+
 		
 class Treasure(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Treasure, self).__init__(session, **kwargs)
 		self.coinValue = self.PA('coinValue', 0)
 		self.potionValue = self.PA('potionValue', 0)
-		self.types.append('TREASURE')
+		self.types.add('TREASURE')
 	def onPlay(self, player, **kwargs):
 		super(Treasure, self).onPlay(player, **kwargs)
 		player.session.resolveEvent(AddCoin, player=player, amnt=self.coinValue.access())
+		player.session.resolveEvent(AddPotion, player=player, amnt=self.potionValue.access())
 		
 class Victory(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Victory, self).__init__(session, **kwargs)
 		self.victoryValue = self.PA('victoryValue', 0)
-		self.types.append('VICTORY')
+		self.types.add('VICTORY')
 	def onGameEnd(self, player, **kwargs):
-		player.resolveEvent(AddVidtory, amnt=self.victoryValue.access())
+		player.resolveEvent(AddVictory, amnt=self.victoryValue.access())
 	def onPileCreate(self, pile, session, **kwargs):
 		if len(session.players)>2: amnt = 12
 		else: amnt = 8
-		for i in range(amnt): pile.append(makeCard(session, type(self)))
+		for i in range(amnt): pile.addCard(type(self))
 		
 class Action(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Action, self).__init__(session, **kwargs)
-		self.types.append('ACTION')
+		self.types.add('ACTION')
 		
 class Cursed(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Cursed, self).__init__(session, **kwargs)
 		self.victoryValue = self.PA('victoryValue', -1)
-		self.types.append('CURSED')
+		self.types.add('CURSED')
 	def onGameEnd(self, player, **kwargs):
 		player.resolveEvent(AddVidtory, amnt=self.victoryValue.access())
 		
 class Reaction(object):
 	triggerSignal = 'Any'
 	def __init__(self, session, **kwargs):
-		if not hasattr(self, 'types'): self.types = []
-		self.types.append('REACTION')
+		if not hasattr(self, 'types'): self.types = set()
+		self.types.add('REACTION')
 		
 class Attack(object):
 	def __init__(self, session, **kwargs):
-		if not hasattr(self, 'types'): self.types = []
-		self.types.append('ATTACK')
+		if not hasattr(self, 'types'): self.types = set()
+		self.types.add('ATTACK')
 	def attackOpponents(self, player, **kwargs):
 		for aplayer in player.session.getPlayers(player):
 			if aplayer!=player: player.resolveEvent(ResolveAttack, source=self, attack=self.attack, victim=aplayer, **kwargs)
@@ -675,7 +701,7 @@ class Duration(object):
 			self.source.owner.resolveEvent(ResolveDuration, card=self.source)	
 	def __init__(self, session, **kwargs):
 		if not hasattr(self, 'types'): self.types = []
-		self.types.append('DURATION')
+		self.types.add('DURATION')
 		self.connectCondition(Replacement, trigger='Destroy', source=self, resolve=self.resolveDestroy, condition=self.conditionDestroy)
 	def onPlay(self, player, **kwargs):
 		self.session.connectCondition(self.DurationTrigger, source=self)
@@ -692,7 +718,7 @@ class Duration(object):
 class Reserve(object):
 	triggerSignal = ''
 	def __init__(self, session, **kwargs):
-		self.types.append('RESERVE')
+		self.types.add('RESERVE')
 		self.connectCondition(Trigger, trigger=self.triggerSignal, source=self, resolve=self.resolveCall, condition=self.conditionCall)
 	def onPlay(self, player, **kwargs):
 		player.resolveEvent(MoveCard, frm=player.inPlay, to=player.mats['Tavern'], card=self.card)
@@ -709,23 +735,22 @@ class Reserve(object):
 	def onPileCreate(self, pile, session, **kwargs):
 		session.addMat('Tavern')
 
-"""		
-class Traveler(CardAdd):
+class Traveler(object):
 	def __init__(self, session, **kwargs):
-		self.types.append('TRAVELER')
+		self.types.add('TRAVELER')
 		self.morph = None
-	def onDestroy(self, player, **kwargs):
-		if not (player.session.NSPiles[self.morph.name].viewTop() and player.user(('no', 'yes'), 'Exchange '+self.name+' for '+self.morph.name)): return
-		for i in range(len(player.inPlay)):
-			if player.inPlay[i]==self:
-				player.returnCard(player.inPlay.pop(i))
-				break
-		player.takeFromPile(player.session.NSPiles[self.morph.name])
+		self.connectCondition(Trigger, trigger='endTurn', source=self.card, resolve=self.resolveEndTurn, condition=self.conditionEndTurn)
+	def conditionEndTurn(self, **kwargs):
+		return self.owner and kwargs['player']==self.owner and self.card in self.owner.inPlay
+	def resolveEndTurn(self, **kwargs):
+		if not self.owner.user(('no', 'yes'), 'Upgrade '+self.view()): return
+		owner = self.owner
+		owner.resolveEvent(ReturnCard, frm=owner.inPlay, card=self.card)
+		owner.resolveEvent(TakeFromPile, frm=self.session.NSPiles[self.morph.name])
 	def onPileCreate(self, pile, session, **kwargs):
-		super(Traveler, self).onPileCreate(pile, session, **kwargs)
 		session.require(self.morph)
 	
-"""
+
 	
 if __name__=='__main__':
 	random.seed()

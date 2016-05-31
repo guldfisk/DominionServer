@@ -13,6 +13,18 @@ class MoveCard(Event):
 		self.to.append(self.card)
 		return self.card
 		
+class GainOwnership(Event):
+	name = 'GainOwnership'
+	def payload(self, **kwargs):
+		self.card.setOwner(self.player)
+		self.player.owns.append(self.card)
+		
+class LooseOwnership(Event):
+	name = 'LooseOwnership'
+	def payload(self, **kwargs):
+		self.card.owner.owns.remove(self.card)
+		self.card.setOwner(None)
+		
 class Gain(Event):
 	name = 'Gain'
 	def setup(self, **kwargs):
@@ -20,7 +32,7 @@ class Gain(Event):
 		self.gainedCard = self.spawnTree(MoveCard).resolve()
 		if not self.gainedCard: return True
 	def payload(self, **kwargs):
-		self.gainedCard.setOwner(self.player)
+		self.spawn(GainOwnership).resolve()
 		return self.gainedCard
 		
 class GainFromPile(Event):
@@ -30,6 +42,24 @@ class GainFromPile(Event):
 		if not self.card: return True
 	def payload(self, **kwargs):
 		return self.spawnTree(Gain).resolve()
+		
+class Take(Event):
+	name = 'Take'
+	def setup(self, **kwargs):
+		if not hasattr(self, 'to'): self.to = self.player.discardPile
+		self.gainedCard = self.spawnTree(MoveCard).resolve()
+		if not self.gainedCard: return True
+	def payload(self, **kwargs):
+		self.spawn(GainOwnership).resolve()
+		return self.gainedCard
+		
+class TakeFromPile(Event):
+	name = 'TakeFromPile'
+	def setup(self, **kwargs):
+		self.card = self.frm.viewTop()
+		if not self.card: return True
+	def payload(self, **kwargs):
+		return self.spawnTree(Take).resolve()
 		
 class Discard(Event):
 	name = 'Discard'
@@ -58,25 +88,27 @@ class Trash(Event):
 		self.trashedCard = self.spawnTree(MoveCard).resolve()
 		if not self.trashedCard: return True
 	def payload(self, **kwargs):
-		self.trashedCard.setOwner(None)
+		self.spawn(LooseOwnership).resolve()
 		return self.trashedCard
 		
 class ReturnCard(Event):
 	name = 'ReturnCard'
 	def setup(self, **kwargs):
+		name = self.card.printedValues.name
 		if not hasattr(self, 'to'):
-			if self.card.name in self.session.piles: self.to = self.session.piles[self.card.name]
-			elif self.card.name in self.session.NSPiles: self.to = self.session.NSPiles[self.card.name]
+			if name in self.session.piles: self.to = self.session.piles[name]
+			elif name in self.session.NSPiles: self.to = self.session.NSPiles[name]
 		self.returnedCard = self.spawnTree(MoveCard).resolve()
 		if not self.returnedCard: return True
 	def payload(self, **kwargs):
-		self.returnedCard.setOwner(None)
+		self.spawn(LooseOwnership).resolve()
 		return self.returnedCard
 		
 class ResolveCard(Event):
 	name = 'ResolveCard'
 	def payload(self, **kwargs):
 		self.card.onPlay(self.player)
+		self.session.resolveTriggerQueue()
 		
 class PlayCard(Event):
 	name = 'PlayCard'
@@ -98,6 +130,7 @@ class AddCoin(Event):
 	name = 'AddCoin'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'amnt'): self.amnt = 1
+		if self.amnt==0: return True
 	def payload(self, **kwargs):
 		if self.amnt<1: return
 		amn = self.amnt
@@ -110,6 +143,7 @@ class AddPotion(Event):
 	name = 'AddPotion'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'amnt'): self.amnt = 1
+		if self.amnt==0: return True
 	def payload(self, **kwargs):
 		if self.amnt<1: return
 		self.player.potions += self.amnt
@@ -118,6 +152,7 @@ class AddDebt(Event):
 	name = 'AddDebt'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'amnt'): self.amnt = 1
+		if self.amnt==0: return True
 	def payload(self, **kwargs):
 		if self.amnt<1: return
 		self.player.debt += self.amnt
@@ -126,6 +161,7 @@ class AddAction(Event):
 	name = 'AddAction'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'amnt'): self.amnt = 1
+		if self.amnt==0: return True
 	def payload(self, **kwargs):
 		if self.amnt<1: return
 		self.player.actions += self.amnt
@@ -134,6 +170,7 @@ class AddBuy(Event):
 	name = 'AddBuy'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'amnt'): self.amnt = 1
+		if self.amnt==0: return True
 	def payload(self, **kwargs):
 		if self.amnt<1: return
 		self.player.buys += self.amnt
@@ -142,6 +179,7 @@ class AddVictory(Event):
 	name = 'AddVictory'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'amnt'): self.amnt = 1
+		if self.amnt==0: return True
 	def payload(self, **kwargs):
 		if self.amnt<1: return
 		self.player.victories += self.amnt
@@ -218,6 +256,18 @@ class Purchase(Event):
 		if not self.spawnTree(CanPay).resolve(): return
 		return self.spawnTree(Buy).resolve()
 		
+class BuyDEvent(Event):
+	name = 'BuyDEvent'
+	def payload(self, **kwargs):
+		if not self.spawnTree(Pay).resolve(): return
+		self.card.onBuy(self.player)
+		
+class PurchaseDEvent(Event):
+	name = 'PurchaseDEvent'
+	def payload(self, **kwargs):
+		if not self.spawnTree(CanPay).resolve(): return
+		return self.spawnTree(BuyDEvent).resolve()
+		
 class PurchaseFromPile(Event):
 	name = 'PurchaseFromPile'
 	def setup(self, **kwargs):
@@ -236,8 +286,8 @@ class PayDebt(Event):
 	name = 'PayDebt'
 	def payload(self, **kwargs):
 		if self.player.debt<1: return
-		amnount = self.player.user(list(range(min(self.player.debt, self.player.coins)+1)), 'Choose amnount')
-		if choice==0: return
+		amount = self.player.user(list(range(min(self.player.debt, self.player.coins)+1)), 'Choose amount')
+		if amount==0: return
 		self.player.debt -= amount
 		self.player.coins -= amount
 		
@@ -259,17 +309,30 @@ class ResolveAttack(Event):
 class MoveToken(Event):
 	name = 'MoveToken'
 	def payload(self, **kwargs):
+		print('---------------------------')
+		print(self.frm, self.token, self.to, self.to.tokens)
 		i = self.frm.index(self.token)
+		print(i)
 		if i==None: return
-		self.card = self.frm.pop(i)
-		self.to.append(self.token)
+		print('wow')
+		self.token = self.frm.pop(i)
+		
+		self.spawn(AddToken).resolve()
 		return self.token
 		
 class AddToken(Event):
 	name = 'AddToken'
 	def payload(self, **kwargs):
-		self.to.tokens.append(self.token)
+		print('ADDTOKEN')
+		if hasattr(self.to, 'tokens'): self.to.tokens.append(self.token)
+		else: self.to.append(self.tokens)
 		self.token.owner = self.to
+		
+class MakeToken(Event):
+	name = 'MakeToken'
+	def payload(self, **kwargs):
+		self.token.playerOwner = self.player
+		self.player.tokens[self.token.name] = self.token
 		
 class ResolveDuration(Event):
 	name = 'ResolveDuration'
