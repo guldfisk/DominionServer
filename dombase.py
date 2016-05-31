@@ -3,7 +3,7 @@ import re
 import math as m
 import copy
 import types
-from Events import *
+from events import *
 
 class Log(object):
 	def __init__(self, **kwargs):

@@ -632,7 +632,7 @@ class Caravan(Action, Duration):
 		player.resolveEvent(AddAction)
 		player.resolveEvent(Draw)
 	def duration(self, **kwargs):
-		self.owner.resolveDuration(Draw)
+		self.owner.resolveEvent(Draw)
 		
 class Cutpurse(Action, Attack):
 	name = 'Cutpurse'
