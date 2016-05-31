@@ -1,5 +1,3 @@
-import sys
-sys.path.append('C:\\Projeter\\farligfarligslange\\events')
 from FullEvent import *
 import random
 
