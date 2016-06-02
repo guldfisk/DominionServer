@@ -207,8 +207,8 @@ class Game(EventSession):
 		return ud
 	def makeStartDeck(self):
 		for player in self.players:
-			for i in range(7): self.resolveEvent(TakeFromPile, frm=self.piles['Band of Misfits'], player=player)
-			for i in range(3): self.resolveEvent(TakeFromPile, frm=self.piles['Watchtower'], player=player)
+			for i in range(7): self.resolveEvent(TakeFromPile, frm=self.piles['Copper'], player=player)
+			for i in range(3): self.resolveEvent(TakeFromPile, frm=self.piles['Estate'], player=player)
 			#for i in range(2): self.resolveEvent(GainFromPile, frm=self.piles['Estate'], player=player)
 			#for i in range(2): self.resolveEvent(TakeFromPile, frm=self.NSPiles['Teacher'], player=player)
 	def rReplaceOrder(self, options):
