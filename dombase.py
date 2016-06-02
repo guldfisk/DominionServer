@@ -118,6 +118,7 @@ class Game(EventSession):
 		self.dp.connect(self.evLogger)
 		for player in self.players: self.dp.connect(player.toPlayer)
 		self.dp.send(signal='globalSetup', players=self.players)
+		self.resolveTriggerQueue()
 		for player in self.players: player.setup(self)
 		while self.running:
 			self.round+=1
@@ -177,7 +178,7 @@ class Game(EventSession):
 					yield self.players[n]
 					n=(n+1)%len(self.players)
 	def addGlobalMat(self, name):
-		if not name in list(self.globalMats): self.globalMats[name] = []
+		if not name in list(self.globalMats): self.globalMats[name] = CPile(name=name)
 	def addMat(self, name, **kwargs):
 		for player in self.players:
 			if not name in list(player.mats): player.mats[name] = CPile(name=name, owner=player, **kwargs)
@@ -206,10 +207,10 @@ class Game(EventSession):
 		return ud
 	def makeStartDeck(self):
 		for player in self.players:
-			for i in range(7): self.resolveEvent(TakeFromPile, frm=self.piles['Copper'], player=player)
-			for i in range(3): self.resolveEvent(TakeFromPile, frm=self.piles['Estate'], player=player)
+			for i in range(7): self.resolveEvent(TakeFromPile, frm=self.piles['Band of Misfits'], player=player)
+			for i in range(3): self.resolveEvent(TakeFromPile, frm=self.piles['Watchtower'], player=player)
 			#for i in range(2): self.resolveEvent(GainFromPile, frm=self.piles['Estate'], player=player)
-			#for i in range(2): self.resolveEvent(GainFromPile, frm=self.NSPiles['Teacher'], player=player)
+			#for i in range(2): self.resolveEvent(TakeFromPile, frm=self.NSPiles['Teacher'], player=player)
 	def rReplaceOrder(self, options):
 		for player in self.getPlayers(self.activePlayer):
 			os = [o for o in options if o.source.owner==player]
@@ -282,7 +283,7 @@ class Player(object):
 		self.uiupdate('king', 'pile', self.session.pilesView(self))
 		self.uiupdate('king', 'even', self.session.eventsView(self)+'\n'+self.session.landmarksView(self))
 		self.uiupdate('king', 'nspi', self.session.NSPilesView(self))
-		if not self==self.session.activePlayer and self.session.activePlayer: oppoV=self.session.activePlayer.getOpponentView()
+		if not self==self.session.activePlayer and self.session.activePlayer: oppoV=self.session.activePlayer.getOpponentView(self)
 		else: oppoV = self.session.getPreviousPlayer(self).getOpponentView(self)
 		self.uiupdate('oppo', 'play', oppoV[0])
 		self.uiupdate('oppo', 'stat', oppoV[1])
@@ -491,7 +492,7 @@ class Pile(CPile):
 		self.terminator = kwargs.get('terminator', False)
 		self.maskot.onPileCreate(self, session)
 		self.name = self.maskot.name
-		self.tokens = CPile(name='Tokens', owner=self)
+		self.tokens = CPile(name=self.name+' Tokens', owner=self)
 	def gain(self, **kwargs):
 		if not self: return
 		popped = self.pop()

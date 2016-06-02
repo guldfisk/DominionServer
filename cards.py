@@ -265,7 +265,7 @@ class Spy(Action, Attack):
 		player.resolveEvent(Draw)
 		self.attackAll(player)
 	def attack(self, player, **kwargs):
-		card = player.resolveEvent(RequistCard)
+		card = player.resolveEvent(RequestCard)
 		if not card: return
 		player.resolveEvent(Reveal, card=card)
 		if self.owner.user(('Top', 'Discard'), ''):
@@ -283,17 +283,18 @@ class Thief(Action, Attack):
 		super(Thief, self).onPlay(player, **kwargs)
 		self.attackOpponents(player)
 	def attack(self, player, **kwargs):
-		cards = player.resolveEvent(requestCards, amnt=2)
+		cards = player.resolveEvent(RequestCards, amnt=2)
 		options = []
 		for card in cards:
-			player.reveal(card)
+			player.resolveEvent(Reveal, card=card)
 			if 'TREASURE' in card.types:
 				options.append(card)
-		if not options: return
-		choice = self.owner.user([o.view() for o in options], 'Choose trash')
-		gain = self.owner.user(('No', 'Yes'), 'Gain')
+		choice = None
+		if options:
+			choice = self.owner.user([o.view() for o in options], 'Choose trash')
+			gain = self.owner.user(('No', 'Yes'), 'Gain')
 		for card in copy.copy(cards):
-			if card==options[choice]:
+			if choice!=None and card==options[choice]:
 				self.owner.resolveEvent(Trash, frm=player.library, card=card)
 				if gain: self.owner.resolveEvent(Gain, frm=self.owner.session.trash, card=card)
 			else: player.resolveEvent(Discard, frm=player.library, card=card)
@@ -437,6 +438,133 @@ class Adventurer(Action):
 
 baseSet = [Cellar, Chapel, Moat, Chancellor, Village, Woodcutter, Workshop, Bureaucrat, Feast, Gardens, Militia, Remodel, Smithy, Spy, Thief, ThroneRoom, CouncilRoom, Festival, Laboratory, Library, Market, Mine, Witch, Adventurer]
 
+class Loan(Treasure):
+	name = 'Loan'
+	def __init__(self, session, **kwargs):
+		super(Loan, self).__init__(session, **kwargs)
+		self.coinValue.set(1)
+		self.coinPrice.set(3)
+	def onPlay(self, player, **kwargs):
+		super(Loan, self).onPlay(player, **kwargs)
+		aside = CPile()
+		while True:
+			card = player.resolveEvent(RequestCard)
+			if not card: break
+			player.resolveEvent(Reveal, card=card)
+			if 'TREASURE' in card.types and player.user(['discard', 'trash'], 'Choose '):
+				player.resolveEvent(Trash, frm=player.library, card=card)
+			else: player.resolveEvent(MoveCard, frm=player.library, to=aside, card=card)
+		for card in copy.copy(aside): player.resolveEvent(Discard, frm=aside, card=card)
+
+class TradeToken(Token):
+	name = 'TradeToken'
+	def __init__(self, session, **kwargs):
+		super(TradeToken, self).__init__(session, **kwargs)
+		self.session.connectCondition(DelayedTrigger, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def conditionGain(self, **kwargs):
+		return kwargs['frm']==self.owner
+	def resolveGain(self, **kwargs):
+		kwargs['player'].resolveEvent(MoveToken, frm=self.owner.tokens, to=self.session.globalMats['TradeRouteMat'], token=self)
+		
+class TradeRoute(Action):
+	name = 'Trade Route'
+	class TradeRouteSetup(DelayedTrigger):
+		name = 'TradeRouteSetup'
+		defaultTrigger = 'globalSetup'
+		def resolve(self, **kwargs):
+			for pile in self.source.session.piles:
+				if 'VICTORY' in self.source.session.piles[pile].maskot.types: self.source.session.resolveEvent(AddToken, to=self.source.session.piles[pile], token=TradeToken(self.source.session))
+	def __init__(self, session, **kwargs):
+		super(TradeRoute, self).__init__(session, **kwargs)
+		self.coinPrice.set(3)
+	def onPlay(self, player, **kwargs):
+		super(TradeRoute, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddBuy)
+		player.resolveEvent(AddCoin, amnt=len(self.session.globalMats['TradeRouteMat']))
+		card = player.selectCard(canBreak=False, message='Choose trash')
+		if card: player.resolveEvent(Trash, frm=player.hand, card=card)
+	def onPileCreate(self, pile, session, **kwargs):
+		super(TradeRoute, self).onPileCreate(pile, session, **kwargs)
+		session.addGlobalMat('TradeRouteMat')
+		self.session.connectCondition(self.TradeRouteSetup, source=self)
+		
+class Watchtower(Action, Reaction):
+	name = 'Watchtower'
+	def __init__(self, session, **kwargs):
+		super(Watchtower, self).__init__(session, **kwargs)
+		Reaction.__init__(self, session, **kwargs)
+		self.coinPrice.set(3)
+		self.connectCondition(Replacement, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def onPlay(self, player, **kwargs):
+		super(Watchtower, self).onPlay(player, **kwargs)
+		while len(player.hand)<6 and player.resolveEvent(Draw): pass
+	def conditionGain(self, **kwargs):
+		return self.owner and kwargs['player']==self.owner and self.card in self.owner.hand
+	def resolveGain(self, event, **kwargs):
+		choice = self.owner.user(('no', 'trash', 'top'), 'Choose mode for '+event.card.view())
+		if choice==0: return event.spawnClone().resolve()
+		elif choice==1:
+			event.spawnClone().resolve()
+			self.owner.resolveEvent(Reveal, card=self.card)
+			return event.spawn(Trash, frm=event.to).resolve()
+		else:
+			self.owner.resolveEvent(Reveal, card=self.card)
+			return event.spawnClone(to=self.owner.library).resolve()
+		
+class Bishop(Action):
+	name = 'Bishop'
+	def __init__(self, session, **kwargs):
+		super(Bishop, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+	def onPlay(self, player, **kwargs):
+		super(Bishop, self).onPlay(player, **kwargs)		
+		player.resolveEvent(AddCoin)
+		player.resolveEXvent(AddVictory)
+		card = player.selectCard(canBreak=False, message='Choose trash')
+		if card:
+			player.resolveEvent(AddVictory, amnt=m.floor(card.coinPice.access()))
+			player.resolveEvent(Trash, frm=player.hand, card=card)
+		for aplayer in self.session.getOtherPlayers(player):
+			card = aplayer.selectCard(message='Choose trash')
+			if card: aplayer.resolveEvent(Trash, frm=aplayer.hand, card=card)
+		
+class Monument(Action):
+	name = 'Monument'
+	def __init__(self, session, **kwargs):
+		super(Monument, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+	def onPlay(self, player, **kwargs):
+		super(Monument, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddVictory)
+		player.resolveEvent(AddCoin, amnt=2)
+
+class Quarry(Treasure):
+	name = 'Quarry'
+	def __init__(self, session, **kwargs):
+		super(Quarry, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+		self.coinValue.set(1)
+		self.connectCondition(ADStatic, trigger='coinPrice', source=self, resolve=self.resolveAccess, condition=self.conditionAccess)
+	def conditionAccess(self, **kwargs):
+		return self.owner and self.card in self.owner.inPlay and hasattr(kwargs['master'], 'types') and 'ACTION' in kwargs['master'].types
+	def resolveAccess(self, val, **kwargs):
+		if val<2: return 0
+		return val-2
+
+class Talisman(Treasure):
+	name = 'Talisman'
+	def __init__(self, session, **kwargs):
+		super(Talisman, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+		self.coinValue.set(1)
+		self.connectCondition(Trigger, trigger='Buy', source=self, resolve=self.resolveBuy, condition=self.conditionBuy)
+	def conditionBuy(self, **kwargs):
+		return self.owner and self.card in self.owner.inPlay and kwargs['card'].coinPrice.access()<5
+	def resolveBuy(self, **kwargs):
+		self.owner.resolveEvent(GainFromPile, frm=kwargs['card'].frmPile)
+	
+prosperity = [Loan, TradeRoute, Watchtower, Bishop, Monument, Quarry, Talisman]
+			
 class EmbargoToken(Token):
 	name = 'Embargo Token'
 	def __init__(self, session, **kwargs):
@@ -445,7 +573,7 @@ class EmbargoToken(Token):
 	def conditionBuy(self, **kwargs):
 		return self.owner and kwargs['frm']==self.owner
 	def resolveBuy(self, event, **kwargs):
-		kwargs['circumstance']['player'].resolveEvent(GainFromPile, frm=self.owner.session.piles['Curse'])
+		kwargs['player'].resolveEvent(GainFromPile, frm=self.owner.session.piles['Curse'])
 		return event.spawnClone.resolve()
 		
 class Embargo(Action):
@@ -966,7 +1094,7 @@ class BoonToken(Token):
 		self.types.append('BOONTOKEN')
 		session.connectCondition(Replacement, trigger='ResolveCard', source=self, resolve=self.resolvePlay, condition=self.conditionPlay)
 	def conditionPlay(self, **kwargs):
-		return self.owner and kwargs['player']==self.playerOwner and kwargs['card'].name==self.owner.cardType.name
+		return self.owner and kwargs['player']==self.playerOwner and kwargs['card'].frmPile==self.owner
 	def resolvePlay(self, event, **kwargs):
 		self.boon()
 		return event.spawnClone().resolve()

@@ -3,7 +3,7 @@ import random
 
 class MoveCard(Event):
 	name = 'MoveCard'
-	def setup(self, **kwargs):
+	def check(self, **kwargs):
 		self.i = self.frm.index(self.card)
 		if self.i==None: return True
 	def payload(self, **kwargs):
@@ -20,13 +20,14 @@ class GainOwnership(Event):
 class LooseOwnership(Event):
 	name = 'LooseOwnership'
 	def payload(self, **kwargs):
-		self.card.owner.owns.remove(self.card)
+		if self.card.owner: self.card.owner.owns.remove(self.card)
 		self.card.setOwner(None)
 		
 class Gain(Event):
 	name = 'Gain'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'to'): self.to = self.player.discardPile
+	def check(self, **kwargs):
 		self.gainedCard = self.spawnTree(MoveCard).resolve()
 		if not self.gainedCard: return True
 	def payload(self, **kwargs):
@@ -35,7 +36,7 @@ class Gain(Event):
 		
 class GainFromPile(Event):
 	name = 'GainFromPile'
-	def setup(self, **kwargs):
+	def check(self, **kwargs):
 		self.card = self.frm.viewTop()
 		if not self.card: return True
 	def payload(self, **kwargs):
@@ -45,6 +46,7 @@ class Take(Event):
 	name = 'Take'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'to'): self.to = self.player.discardPile
+	def check(self, **kwargs):
 		self.gainedCard = self.spawnTree(MoveCard).resolve()
 		if not self.gainedCard: return True
 	def payload(self, **kwargs):
@@ -53,7 +55,7 @@ class Take(Event):
 		
 class TakeFromPile(Event):
 	name = 'TakeFromPile'
-	def setup(self, **kwargs):
+	def check(self, **kwargs):
 		self.card = self.frm.viewTop()
 		if not self.card: return True
 	def payload(self, **kwargs):
@@ -64,6 +66,7 @@ class Discard(Event):
 	def setup(self, **kwargs):
 		if not hasattr(self, 'frm'): self.frm = self.player.hand
 		if not hasattr(self, 'to'): self.to = self.player.discardPile
+	def check(self, **kwargs):
 		self.discardedCard = self.spawnTree(MoveCard).resolve()
 		if not self.discardedCard: return True
 	def payload(self, **kwargs):
@@ -74,6 +77,7 @@ class Destroy(Event):
 	def setup(self, **kwargs):
 		if not hasattr(self, 'frm'): self.frm = self.player.inPlay
 		if not hasattr(self, 'to'): self.to = self.player.discardPile
+	def check(self, **kwargs):
 		self.destroyedCard = self.spawnTree(MoveCard).resolve()
 		if not self.destroyedCard: return True
 	def payload(self, **kwargs):
@@ -82,7 +86,8 @@ class Destroy(Event):
 class Trash(Event):
 	name = 'Trash'
 	def setup(self, **kwargs):
-		if not hasattr(self, 'to'): self.to = self.session.trash
+		self.to = self.session.trash
+	def check(self, **kwargs):
 		self.trashedCard = self.spawnTree(MoveCard).resolve()
 		if not self.trashedCard: return True
 	def payload(self, **kwargs):
@@ -96,6 +101,7 @@ class ReturnCard(Event):
 		if not hasattr(self, 'to'):
 			if name in self.session.piles: self.to = self.session.piles[name]
 			elif name in self.session.NSPiles: self.to = self.session.NSPiles[name]
+	def check(self, **kwargs):
 		self.returnedCard = self.spawnTree(MoveCard).resolve()
 		if not self.returnedCard: return True
 	def payload(self, **kwargs):
@@ -118,9 +124,10 @@ class CastCard(Event):
 	def setup(self, **kwargs):
 		if not hasattr(self, 'frm'): self.frm = self.player.hand
 		if not hasattr(self, 'to'): self.to = self.player.inPlay
-	def payload(self, **kwargs):
+	def check(self, **kwargs):
 		card = self.spawnTree(MoveCard).resolve()
 		if not card: return
+	def payload(self, **kwargs):
 		self.spawnTree(PlayCard).resolve()
 		return True
 		
@@ -130,7 +137,6 @@ class AddCoin(Event):
 		if not hasattr(self, 'amnt'): self.amnt = 1
 		if self.amnt==0: return True
 	def payload(self, **kwargs):
-		if self.amnt<1: return
 		amn = self.amnt
 		if self.player.minusCoin:
 			amn -= 1
@@ -143,7 +149,6 @@ class AddPotion(Event):
 		if not hasattr(self, 'amnt'): self.amnt = 1
 		if self.amnt==0: return True
 	def payload(self, **kwargs):
-		if self.amnt<1: return
 		self.player.potions += self.amnt
 		
 class AddDebt(Event):
@@ -152,7 +157,6 @@ class AddDebt(Event):
 		if not hasattr(self, 'amnt'): self.amnt = 1
 		if self.amnt==0: return True
 	def payload(self, **kwargs):
-		if self.amnt<1: return
 		self.player.debt += self.amnt
 
 class AddAction(Event):
@@ -161,7 +165,6 @@ class AddAction(Event):
 		if not hasattr(self, 'amnt'): self.amnt = 1
 		if self.amnt==0: return True
 	def payload(self, **kwargs):
-		if self.amnt<1: return
 		self.player.actions += self.amnt
 
 class AddBuy(Event):
@@ -170,7 +173,6 @@ class AddBuy(Event):
 		if not hasattr(self, 'amnt'): self.amnt = 1
 		if self.amnt==0: return True
 	def payload(self, **kwargs):
-		if self.amnt<1: return
 		self.player.buys += self.amnt
 		
 class AddVictory(Event):
@@ -179,7 +181,6 @@ class AddVictory(Event):
 		if not hasattr(self, 'amnt'): self.amnt = 1
 		if self.amnt==0: return True
 	def payload(self, **kwargs):
-		if self.amnt<1: return
 		self.player.victories += self.amnt
 		
 class Reshuffle(Event):
@@ -211,6 +212,7 @@ class Draw(Event):
 	def setup(self, **kwargs):
 		self.frm = self.player.library
 		self.to = self.player.hand
+	def check(self, **kwargs):
 		self.card = self.spawnTree(RequestCard).resolve()
 		if not self.card: return True
 	def payload(self, **kwargs):
@@ -270,8 +272,9 @@ class PurchaseFromPile(Event):
 	name = 'PurchaseFromPile'
 	def setup(self, **kwargs):
 		self.card = self.frm.viewTop()
-	def payload(self, **kwargs):
+	def check(self, **kwargs):
 		if not self.card: return
+	def payload(self, **kwargs):
 		return self.spawnTree(Purchase).resolve()
 		
 class FlipJourney(Event):
@@ -282,8 +285,9 @@ class FlipJourney(Event):
 		
 class PayDebt(Event):
 	name = 'PayDebt'
-	def payload(self, **kwargs):
+	def check(self, **kwargs):
 		if self.player.debt<1: return
+	def payload(self, **kwargs):
 		amount = self.player.user(list(range(min(self.player.debt, self.player.coins)+1)), 'Choose amount')
 		if amount==0: return
 		self.player.debt -= amount
@@ -307,23 +311,18 @@ class ResolveAttack(Event):
 class MoveToken(Event):
 	name = 'MoveToken'
 	def payload(self, **kwargs):
-		print('---------------------------')
-		print(self.frm, self.token, self.to, self.to.tokens)
 		i = self.frm.index(self.token)
-		print(i)
 		if i==None: return
-		print('wow')
 		self.token = self.frm.pop(i)
-		
 		self.spawn(AddToken).resolve()
 		return self.token
 		
 class AddToken(Event):
 	name = 'AddToken'
-	def payload(self, **kwargs):
-		print('ADDTOKEN')
+	def setup(self, **kwargs):
 		if hasattr(self.to, 'tokens'): self.to.tokens.append(self.token)
-		else: self.to.append(self.tokens)
+		else: self.to.append(self.token)
+	def payload(self, **kwargs):
 		self.token.owner = self.to
 		
 class MakeToken(Event):

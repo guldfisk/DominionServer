@@ -48,7 +48,8 @@ class EventSession(object):
 		self.triggerQueue[:] = []
 		while self.stack:
 			trigger = self.stack.pop()
-			trigger[0].resolve(circumstance=trigger[1])
+			trigger[0].resolve(**trigger[1])
+			#trigger[0].resolve(circumstance=trigger[1])
 		
 def replaceOrder(options):
 	return 0
@@ -79,6 +80,7 @@ class Condition(SessionSub):
 		self.successfulLoad = kwargs.pop('successfulLoad', self.successfulLoad)
 		self.condition = kwargs.pop('condition', self.condition)
 		self.resolve = kwargs.pop('resolve', self.resolve)
+		self.timeStamp = session.getTimeStamp()
 		self.__dict__.update(kwargs)
 	def getTrigger(self, **kwargs):
 		return self.trigger
@@ -106,10 +108,13 @@ class Event(SessionSub):
 		pass
 	def setup(self, **kwargs):
 		pass
+	def check(self, **kwargs):
+		pass
 	def resolve(self, **kwargs):
+		if self.setup(**kwargs): return
 		replacements = [replacement[1] for replacement in self.session.dp.send(signal='try_'+self.name, **self.__dict__) if not replacement[1] in self.hasReplaced]
 		if not replacements:
-			if self.setup(**kwargs): return
+			if self.check(**kwargs): return
 			self.session.dp.send(self.name+'_begin', **self.__dict__)
 			result = self.payload(**kwargs)
 			self.session.dp.send(self.name, **self.__dict__)
@@ -181,18 +186,19 @@ class DelayedReplacement(Continuous, Replacement):
 	def getTerminateTrigger(self, **kwargs):
 		return False
 	
-		
 #Add-on
-class AttributeDefining(object):
+class AttributeModifying(object):
 	def getTrigger(self, **kwargs):
 		return 'AccessAttribute_'+self.trigger
-	def modify(self, val, **kwargs):
+	def resolve(self, val, **kwargs):
 		return val
+	def successfulLoad(self, **kwargs):
+		return self
 		
-class ADStatic(Condition, AttributeDefining):
-	name = 'BaseStatic'
+class ADStatic(AttributeModifying, Condition):
+	name = 'BaseADStatic'
 	
-class ADContinuous(Continuous, AttributeDefining):
+class ADContinuous(AttributeModifying, Continuous):
 	name = 'BaseADCountinuous'
 	
 class ProtectedAttribute(object):
@@ -202,8 +208,8 @@ class ProtectedAttribute(object):
 		self.val = val
 	def access(self, **kwargs):
 		val = copy.copy(self.val)
-		for respons in self.master.session.orderedTimeStamps(self.master.session.dp.send('AccessAttribute_'+self.name, master=self.master, val=val, **kwargs)):
-			if respons: val = respons.modify(val)
+		for respons in self.master.session.orderedTimeStamps([o[1] for o in self.master.session.dp.send('AccessAttribute_'+self.name, master=self.master, val=val, **kwargs)]):
+			if respons!=None: val = respons.resolve(val, **kwargs)
 		return val
 	def set(self, val, **kwargs):
 		self.val = val

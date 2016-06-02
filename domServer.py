@@ -91,7 +91,7 @@ class OnlinePlayer(server.CST):
 		for player in game.players:	player.game = game
 		game.makePiles(baseSetBase)
 		#options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands+empires
-		options = baseSet+seaside+darkages+adventures+alchemy+empires
+		options = baseSet+seaside+darkages+adventures+alchemy+empires+prosperity
 		allDEvents = adventuresDEvents
 		landmarks = empiresLandmarks
 		if allCards:
