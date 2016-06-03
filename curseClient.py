@@ -35,8 +35,9 @@ ipbuf = InputBuffer()
 	
 def testUser(options, name='noName'):
 	if not name=='buySelection':
-		logw.addstr(name, end=': ')
+		logw.addstr('-?'+name, end=': ')
 		for option in options: logw.addstr(gN(option), end=', ')
+	else: logw.addstr('-?---Choose buy---')
 	choicePosition = -2
 	while choicePosition<-1:
 		choice = ipbuf.get()

@@ -175,7 +175,7 @@ class DelayedTrigger(Continuous, Trigger):
 	def successfulLoad(self, **kwargs):
 		super(DelayedTrigger, self).successfulLoad(**kwargs)
 		self.disconnect(**kwargs)
-	def getTerminateTrigger(self, **kwargs):
+	def terminateCondition(self, **kwargs):
 		return False
 		
 class DelayedReplacement(Continuous, Replacement):
@@ -183,7 +183,7 @@ class DelayedReplacement(Continuous, Replacement):
 	def successfulLoad(self, **kwargs):
 		self.disconnect(**kwargs)
 		return self
-	def getTerminateTrigger(self, **kwargs):
+	def terminateCondition(self, **kwargs):
 		return False
 	
 #Add-on

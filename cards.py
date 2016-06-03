@@ -84,12 +84,9 @@ class Cellar(Action):
 	def onPlay(self, player, **kwargs):
 		super(Cellar, self).onPlay(player, **kwargs)
 		player.resolveEvent(AddAction)
-		discardedAmnt = 0
-		while player.hand:
-			choice = player.user([o.view() for o in player.hand]+['EndCellar'], 'Choose discard ('+str(discardedAmnt)+') cards discarded')
-			if choice+1>len(player.hand): break
-			if player.resolveEvent(Discard, card=player.hand[choice]): discardedAmnt += 1
-		player.resolveEvent(DrawCards, amnt=discardedAmnt)
+		cards = player.selectCards(optional=True, message='Choose discard')
+		for card in cards: player.resolveEvent(Discard, frm=player.hand, card=card)
+		player.resolveEvent(DrawCards, amnt=len(cards))
 		
 class Chapel(Action):
 	name = 'Chapel'
@@ -98,7 +95,7 @@ class Chapel(Action):
 		self.coinPrice.set(2)
 	def onPlay(self, player, **kwargs):
 		super(Chapel, self).onPlay(player, **kwargs)
-		for card in player.selectCards(4): player.resolveEvent(Trash, frm=player.hand, card=card)
+		for card in player.selectCards(4, optional=True): player.resolveEvent(Trash, frm=player, card=card)
 	
 class Moat(Action, Reaction):
 	name = 'Moat'
@@ -178,7 +175,7 @@ class Bureaucrat(Action, Attack):
 			for card in player.hand: player.resolveEvent(Reveal, card=card)
 			return
 		while True:
-			card = player.selectCard(canBreak=False, message='Choose top')
+			card = player.selectCard(message='Choose top')
 			if not 'VICTORY' in card.types: continue
 			player.resolveEvent(Reveal, card=card)
 			player.resolveEvent(MoveCard, frm=player.hand, to=player.library, card=card)
@@ -214,7 +211,7 @@ class Militia(Action, Attack):
 		self.attackOpponents(player)
 	def attack(self, player, **kwargs):
 		while len(player.hand)>3:
-			choice = player.selectCard(canBreak=False, message='Choose discard')
+			choice = player.selectCard(message='Choose discard')
 			player.resolveEvent(Discard, card=card)
 
 class Moneylender(Action):
@@ -239,7 +236,7 @@ class Remodel(Action):
 		self.coinPrice.set(4)
 	def onPlay(self, player, **kwargs):
 		super(Remodel, self).onPlay(player, **kwargs)
-		card = player.selectCard(canBreak=False, message='Choose trash')
+		card = player.selectCard(message='Choose trash')
 		if not card: return
 		player.resolveEvent(Trash, card=card, frm=player.hand)
 		player.gainCostingLessThan(3, card=card)
@@ -451,8 +448,10 @@ class Loan(Treasure):
 			card = player.resolveEvent(RequestCard)
 			if not card: break
 			player.resolveEvent(Reveal, card=card)
-			if 'TREASURE' in card.types and player.user(['discard', 'trash'], 'Choose '):
-				player.resolveEvent(Trash, frm=player.library, card=card)
+			if 'TREASURE' in card.types:
+				if player.user(['discard', 'trash'], 'Choose '): player.resolveEvent(Trash, frm=player.library, card=card)
+				else: player.resolveEvent(Discard, frm=player.library, card=card)
+				break
 			else: player.resolveEvent(MoveCard, frm=player.library, to=aside, card=card)
 		for card in copy.copy(aside): player.resolveEvent(Discard, frm=aside, card=card)
 
@@ -481,7 +480,7 @@ class TradeRoute(Action):
 		super(TradeRoute, self).onPlay(player, **kwargs)
 		player.resolveEvent(AddBuy)
 		player.resolveEvent(AddCoin, amnt=len(self.session.globalMats['TradeRouteMat']))
-		card = player.selectCard(canBreak=False, message='Choose trash')
+		card = player.selectCard(message='Choose trash')
 		if card: player.resolveEvent(Trash, frm=player.hand, card=card)
 	def onPileCreate(self, pile, session, **kwargs):
 		super(TradeRoute, self).onPileCreate(pile, session, **kwargs)
@@ -519,13 +518,13 @@ class Bishop(Action):
 	def onPlay(self, player, **kwargs):
 		super(Bishop, self).onPlay(player, **kwargs)		
 		player.resolveEvent(AddCoin)
-		player.resolveEXvent(AddVictory)
-		card = player.selectCard(canBreak=False, message='Choose trash')
+		player.resolveEvent(AddVictory)
+		card = player.selectCard(message='Choose trash')
 		if card:
-			player.resolveEvent(AddVictory, amnt=m.floor(card.coinPice.access()))
+			player.resolveEvent(AddVictory, amnt=m.floor(card.coinPrice.access()/2))
 			player.resolveEvent(Trash, frm=player.hand, card=card)
 		for aplayer in self.session.getOtherPlayers(player):
-			card = aplayer.selectCard(message='Choose trash')
+			card = aplayer.selectCard(message='Choose trash', optional=True)
 			if card: aplayer.resolveEvent(Trash, frm=aplayer.hand, card=card)
 		
 class Monument(Action):
@@ -563,7 +562,284 @@ class Talisman(Treasure):
 	def resolveBuy(self, **kwargs):
 		self.owner.resolveEvent(GainFromPile, frm=kwargs['card'].frmPile)
 	
-prosperity = [Loan, TradeRoute, Watchtower, Bishop, Monument, Quarry, Talisman]
+class WorkersVillage(Action):
+	name = "Worker's Village"
+	def __init__(self, session, **kwargs):
+		super(WorkersVillage, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+	def onPlay(self, player, **kwargs):
+		super(WorkersVillage, self).onPlay(player, **kwargs)	
+		player.resolveEvent(AddAction, amnt=2)
+		player.resolveEvent(Draw)
+		player.resolveEvent(AddBuy)
+		
+class City(Action):
+	name = 'City'
+	def __init__(self, session, **kwargs):
+		super(City, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+	def onPlay(self, player, **kwargs):
+		super(City, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddAction, amnt=2)
+		empty = len(self.session.getEmptyPiles())
+		if empty>0:
+			player.resolveEvent(DrawCards, amnt=2)
+			if empty>1:
+				player.resolveEvent(AddCoin)
+				player.resolveEvent(AddBuy)
+		else: player.resolveEvent(Draw)
+
+class Contraband(Treasure):
+	name = 'Contraband'
+	class ContrabandBan(ReplaceThisTurn):
+		name = 'ContrabandBan'
+		defaultTrigger = 'Purchase'
+		def condition(self, **kwargs):
+			return kwargs['card'].frmPile==self.banning
+		def resolve(self, event, **kwargs):
+			return
+	def __init__(self, session, **kwargs):
+		super(Contraband, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+		self.coinValue.set(3)
+	def onPlay(self, player, **kwargs):
+		super(Contraband, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddBuy)
+		pile = self.session.getNextPlayer(player).getPile()
+		self.session.connectCondition(self.ContrabandBan, source=self, banning=pile)
+	
+class CountingHouse(Action):
+	name = 'Counting House'
+	def __init__(self, session, **kwargs):
+		super(CountingHouse, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+	def onPlay(self, player, **kwargs):
+		super(CountingHouse, self).onPlay(player, **kwargs)
+		coppers = [o for o in player.discardPile if o.name=='Copper']
+		for i in range(player.user(list(range(len(coppers)+1)), 'Choose amount')): player.resolveEvent(MoveCard, frm=player.discardPile, to=player.hand, card=coppers[i])
+
+class Mint(Action):
+	name = 'Mint'
+	def __init__(self, session, **kwargs):
+		super(Mint, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+		self.connectCondition(Trigger, trigger='Buy', source=self, resolve=self.resolveBuy, condition=self.conditionBuy)
+	def onPlay(self, player, **kwargs):
+		super(Mint, self).onPlay(player, **kwargs)
+		card = player.selectCard(message='Choose gain', restriction=lambda o: 'TREASURE' in o.types)
+		if card and card.name in self.session.piles:
+			player.resolveEvent(Reveal, card=card)
+			player.resolveEvent(GainFromPile, frm=self.session.piles[card.name])
+	def conditionBuy(self, **kwargs):
+		return kwargs['card']==self.card
+	def resolveBuy(self, **kwargs):
+		for card in copy.copy(kwargs['player'].inPlay):
+			if 'TREASURE' in card.types: kwargs['player'].resolveEvent(Trash, frm=kwargs['player'].inPlay, card=card)
+	
+class Mountebank(Action, Attack):
+	name = 'Mountebank'
+	def __init__(self, session, **kwargs):
+		super(Mountebank, self).__init__(session, **kwargs)
+		Attack.__init__(self, session, **kwargs)
+		self.coinPrice.set(5)
+	def onPlay(self, player, **kwargs):
+		super(Mountebank, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddCoin, amnt=2)
+		self.attackOpponents(player)
+	def attack(self, player, **kwargs):
+		for i in range(len(player.hand)):
+			if player.hand[i].name=='Curse':
+				if player.user(('keep', 'discardCurse'), ''):
+					player.resolveEvent(Discard, card=player.hand[i])
+					return
+				break
+		player.resolveEvent(GainFromPile, frm=self.session.piles['Curse'])
+		player.resolveEvent(GainFromPile, frm=self.session.piles['Copper'])
+
+class Rabble(Action, Attack):
+	name = 'Rabble'
+	def __init__(self, session, **kwargs):
+		super(Rabble, self).__init__(session, **kwargs)
+		Attack.__init__(self, session, **kwargs)
+		self.coinPrice.set(5)
+	def onPlay(self, player, **kwargs):
+		super(Rabble, self).onPlay(player, **kwargs)
+		player.resolveEvent(DrawCards, amnt=3)
+		self.attackOpponents(player)
+	def attack(self, player, **kwargs):
+		cards = player.resolveEvent(RequestCards, amnt=3)
+		for card in cards:
+			if 'ACTION' in cards.types or 'TREASURE' in card.types: player.resolveEvent(Discard, frm=player.library, card=card)
+
+class Vault(Action):
+	name = 'Vault'
+	def __init__(self, session, **kwargs):
+		super(Vault, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+	def onPlay(self, player, **kwargs):
+		super(Vault, self).onPlay(player, **kwargs)
+		player.resolveEvent(DrawCards, amnt=2)
+		cards = player.selectCards(optional=True, message='Choose discard')
+		for card in cards: player.resolveEvent(Discard, frm=player.hand, card=card)
+		player.resolveEvent(AddCoin, amnt=len(cards))
+		for aplayer in self.session.getOtherPlayers(player):
+			if len(aplayer.hand)>1 and aplayer.user(('discard', 'DoNotDiscard'), ''):
+				cards = aplayer.selectCards(2, message='Choose discard')
+				if len(cards)>1:
+					for card in cards: aplayer.resolveEvent(Discard, card=card)
+					aplayer.resolveEvent(Draw)
+
+class Venture(Treasure):
+	name = 'Venture'
+	def __init__(self, session, **kwargs):
+		super(Venture, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+		self.coinValue.set(1)
+	def onPlay(self, player, **kwargs):
+		super(Venture, self).onPlay(player, **kwargs)
+		aside = CPile()
+		while True:
+			card = player.resolveEvent(RequestCard)
+			if not card: break
+			player.resolveEvent(Reveal, card=card)
+			if 'TREASURE' in card.types:
+				player.resolveEvent(CasrCard, frm=player.library, card=card)
+				break
+			else: player.resolveEvent(MoveCard, frm=player.library, to=aside, card=card)
+		for card in copy.copy(aside): player.resolveEvent(Discard, frm=aside, card=card)
+
+class Goons(Action, Attack):
+	name = 'Goons'
+	def __init__(self, session, **kwargs):
+		super(Goons, self).__init__(session, **kwargs)
+		Attack.__init__(self, session, **kwargs)
+		self.coinPrice.set(6)
+		self.connectCondition(Trigger, trigger='Buy', source=self, resolve=self.resolveBuy, condition=self.conditionBuy)
+	def onPlay(self, player, **kwargs):
+		super(Goons, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddBuy)
+		player.resolveEvent(AddCoin, amnt=2)
+		self.attackOpponents(player)
+	def attack(self, player, **kwargs):
+		while len(player.hand)>3: player.resolveEvent(Discard, card=player.selectCard(message='Choose discard'))
+	def conditionBuy(self, **kwargs):
+		return self.owner and self.card in self.owner.inPlay
+	def resolveBuy(self, **kwargs):
+		self.owner.resolveEvent(AddVictory)
+
+class GrandMarket(Action):
+	name = 'Grand Market'
+	def __init__(self, session, **kwargs):
+		super(GrandMarket, self).__init__(session, **kwargs)
+		self.coinPrice.set(6)
+		self.connectCondition(Replacement, trigger='Purchase', source=self, resolve=self.resolvePurchase, condition=self.conditionPurchase)
+	def onPlay(self, player, **kwargs):
+		super(GrandMarket, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddBuy)
+		player.resolveEvent(Draw)
+		player.resolveEvent(AddAction)
+		player.resolveEvent(AddCoin, amnt=2)
+	def conditionPurchase(self, **kwargs):
+		return kwargs['card']==self.card and 'Copper' in [o.name for o in kwargs['player'].inPlay]
+	def resolvePurchase(self, event, **kwargs):
+		return
+
+class Hoard(Treasure):
+	name = 'Hoard'
+	def __init__(self, session, **kwargs):
+		super(Hoard, self).__init__(session, **kwargs)
+		self.coinPrice.set(6)
+		self.coinValue.set(2)
+		self.connectCondition(Trigger, trigger='Buy', source=self, resolve=self.resolveBuy, condition=self.conditionBuy)
+	def conditionBuy(self, **kwargs):
+		return self.owner and self.card in self.owner.inPlay
+	def resolveBuy(self, **kwargs):
+		self.owner.resolveEvent(GainFromPile, frm=self.session.piles['Gold'])
+	
+class Bank(Treasure):
+	name = 'Bank'
+	def __init__(self, session, **kwargs):
+		super(Bank, self).__init__(session, **kwargs)
+		self.coinPrice.set(7)
+	def onPlay(self, player, **kwargs):
+		player.resolveEvent(AddCoin, amnt=len([o for o in player.inPlay if 'TREASURE' in o.types]))
+
+class Expand(Action):
+	name = 'Expand'
+	def __init__(self, session, **kwargs):
+		super(Expand, self).__init__(session, **kwargs)
+		self.coinPrice.set(7)
+	def onPlay(self, player, **kwargs):
+		super(Expand, self).onPlay(player, **kwargs)
+		card = player.selectCard(message='Choose trash')
+		if not card: return
+		player.resolveEvent(Trash, card=card, frm=player.hand)
+		player.gainCostingLessThan(4, card=card)
+	
+class Forge(Action):
+	name = 'Forge'
+	def __init__(self, session, **kwargs):
+		super(Forge, self).__init__(session, **kwargs)
+		self.coinPrice.set(7)
+	def onPlay(self, player, **kwargs):
+		super(Forge, self).onPlay(player, **kwargs)
+		cards = selectCards(optional=True, message='Choose trash')
+		if not cards: return
+		for card in cards: player.resolveEvent(Trash, frm=player.hand, card=card)
+		player.gainCosting(np.sum([o.coinPrice.access() for o in cards]))
+
+class KingsCourt(Action):
+	name = "King's Court"
+	def __init__(self, session, **kwargs):
+		super(KingsCourt, self).__init__(session, **kwargs)
+		self.coinPrice.set(7)
+		self.links = []
+		self.connectCondition(Replacement, trigger='Destroy', source=self.card, resolve=self.resolveDestroy, condition=self.conditionDestroy)
+		self.connectCondition(Replacement, trigger='MoveCard', source=self.card, resolve=self.resolveMoveLink, condition=self.conditionMoveLink)
+	def onPlay(self, player, **kwargs):
+		super(KingsCourt, self).onPlay(player, **kwargs)
+		self.links = []
+		options = [o for o in player.hand if 'ACTION' in o.types]
+		if not options: return
+		choice = player.user([o.view() for o in options], 'Choose action')
+		if not player.resolveEvent(CastCard, card=options[choice]): return
+		self.links.append(options[choice])
+		for i in range(2): player.resolveEvent(PlayCard, card=options[choice])
+	def conditionDestroy(self, **kwargs):
+		return self.owner and self.card in self.owner.inPlay
+	def resolveDestroy(self, event, **kwargs):
+		if event.card==self.card and self.links: return
+		if event.card in self.links: self.links.remove(event.card)
+		if not self.links: event.spawn(Destroy, card=self.card).resolve()
+		return event.spawnClone().resolve()
+	def conditionMoveLink(self, **kwargs):
+		return self.owner and kwargs['player']==self.owner and kwargs['card'] in self.links and kwargs['frm']==self.owner.inPlay
+	def resolveMoveLink(self, event, **kwargs):
+		self.links.remove(event.card)
+		return event.spawnClone().resolve()
+	
+class Peddler(Action):
+	name = 'Peddler'
+	def __init__(self, session, **kwargs):
+		super(Peddler, self).__init__(session, **kwargs)
+		self.coinPrice.set(8)
+		self.connectCondition(ADStatic, trigger='coinPrice', source=self, resolve=self.resolveAccess, condition=self.conditionAccess)
+	def onPlay(self, player, **kwargs):
+		super(Peddler, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddCoin)
+		player.resolveEvent(AddAction)
+		player.resolveEvent(Draw)
+	def conditionAccess(self, **kwargs):	
+		if not kwargs['master']==self: return False
+		for i in range(len(self.session.events)-1, -1, -1):
+			if self.session.events[i][0]=='actionPhase' or self.session.events[i][0]=='treasurePhase': return False
+			elif self.session.events[i][0]=='buyPhase': return True
+	def resolveAccess(self, val, **kwargs):
+		v = val-len([o for o in self.session.activePlayer.inPlay if 'ACTION' in o.types])*2
+		if v>0: return v
+		return 0
+	
+prosperity = [Loan, TradeRoute, Watchtower, Bishop, Monument, Quarry, Talisman, WorkersVillage, City, Contraband, CountingHouse, Mint, Mountebank, Rabble, Vault, Venture, Goons, GrandMarket, Hoard, Expand, KingsCourt, Peddler]
 			
 class EmbargoToken(Token):
 	name = 'Embargo Token'
@@ -599,7 +875,7 @@ class Haven(Action, Duration):
 		Duration.onPlay(self, player, **kwargs)
 		player.resolveEvent(Draw)
 		player.resolveEvent(AddAction)
-		card = player.selectCard(canBreak=False, message='Choose saved')
+		card = player.selectCard(message='Choose saved')
 		if not card: return
 		card = player.resolveEvent(MoveCard, frm=player.hand, to=player.mats['HavenMat'], card=card)
 		if card: self.saved.append(card)
@@ -675,7 +951,7 @@ class Ambassador(Action, Attack):
 		self.coinPrice.set(3)
 	def onPlay(self, player, **kwargs):
 		super(Ambassador, self).onPlay(player, **kwargs)
-		revealedCard = player.selectCard(canBreak=False, message='Choose return')
+		revealedCard = player.selectCard(message='Choose return')
 		if not revealedCard: return
 		player.resolveEvent(Reveal, card=revealedCard)
 		if not revealedCard.name in player.session.piles: return
@@ -746,7 +1022,7 @@ class Warehouse(Action):
 		super(Warehouse, self).onPlay(player, **kwargs)
 		player.resolveEvent(AddAction)
 		player.resolveEvent(DrawCards, amnt=3)
-		for card in player.selectCards(3, canBreak=False): player.resolveEvent(Discard, card=card)
+		for card in player.selectCards(3): player.resolveEvent(Discard, card=card)
 		
 class Caravan(Action, Duration):
 	name = 'Caravan'
@@ -788,7 +1064,7 @@ class Island(Action, Victory):
 		self.victoryValue.set(2)
 	def onPlay(self, player, **kwargs):
 		super(Island, self).onPlay(player, **kwargs)
-		card = player.selectCard(canBreak=False)
+		card = player.selectCard(message='Choose hide')
 		if card: player.resolveEvent(MoveCard, frm=player.hand, to=player.mats['IslandMat'], card=card)
 		player.resolveEvent(MoveCard, frm=player.inPlay, to=player.mats['IslandMat'], card=self.card)
 	def onPileCreate(self, pile, session, **kwargs):
@@ -843,7 +1119,7 @@ class Salvager(Action):
 	def onPlay(self, player, **kwargs):
 		super(Salvager, self).onPlay(player, **kwargs)
 		player.resolveEvent(AddBuy)
-		card = player.selectCard(canBreak=False)
+		card = player.selectCard(message='Choose trash')
 		if not card: return
 		player.resolveEvent(AddCoin, amnt=card.coinPrice.access())
 		player.resolveEvent(Trash, frm=player.hand, card=card)
@@ -912,7 +1188,7 @@ class GhostShip(Action, Attack):
 		self.attackOpponents(player)
 	def attack(self, player, **kwargs):
 		while len(player.hand)>3:
-			player.resolveEvent(MoveCard, frm=player.hand, to=player.library, card=player.selectCard(canBreak=False, message='Choose top'))
+			player.resolveEvent(MoveCard, frm=player.hand, to=player.library, card=player.selectCard(message='Choose top'))
 
 class MerchantShip(Action, Duration):
 	name = 'Merchant Ship'
@@ -1203,7 +1479,7 @@ class Hero(Action, Traveler):
 	def onPlay(self, player, **kwargs):
 		super(Hero, self).onPlay(player, **kwargs)
 		player.resolveEvent(AddCoin, amnt=2)
-		player.gain(canBreak=False, restriction=lambda o: 'TREASURE' in o.types)
+		player.gain(restriction=lambda o: 'TREASURE' in o.types)
 	def onPileCreate(self, pile, session, **kwargs):
 		session.require(self.morph)
 		for i in range(5): pile.addCard(type(self))
@@ -1266,7 +1542,7 @@ class Soldier(Action, Traveler, Attack):
 		player.resolveEvent(AddCoin, amnt=len([o for o in player.inPlay if 'ATTACK' in o.types and o!=self.card]))
 		self.attackOpponents(player)
 	def attack(self, player, **kwargs):
-		if len(player.hand)>3: player.resolveEvent(Discard, card=player.selectCard(canBreak=False, message='Choose discard'))
+		if len(player.hand)>3: player.resolveEvent(Discard, card=player.selectCard(message='Choose discard'))
 	def onPileCreate(self, pile, session, **kwargs):
 		session.require(self.morph)
 		for i in range(5): pile.addCard(type(self))
@@ -1282,7 +1558,7 @@ class Fugitive(Action, Traveler):
 		super(Fugitive, self).onPlay(player, **kwargs)
 		player.resolveEvent(DrawCards, amnt=2)
 		player.resolveEvent(AddAction)
-		card = player.selectCard(canBreak=False, message='Choose discard')
+		card = player.selectCard(message='Choose discard')
 		if card: player.resolveEvent(Discard, card=card)
 	def onPileCreate(self, pile, session, **kwargs):
 		session.require(self.morph)
@@ -1370,7 +1646,7 @@ class Ratcatcher(Action, Reserve):
 		player.resolveEvent(AddAction)
 		player.resolveEvent(Draw)
 	def call(self, **kwargs):
-		card = self.owner.selectCard(canBreak=False)
+		card = self.owner.selectCard('Choose trash')
 		if card: self.owner.resolveEvent(Trash, frm=self.owner.hand, card=card)
 	def onPileCreate(self, pile, session, **kwargs):
 		super(Ratcatcher, self).onPileCreate(pile, session, **kwargs)
@@ -1394,7 +1670,7 @@ class Transmute(Action):
 		self.potionPrice.set(1)
 	def onPlay(self, player, **kwargs):
 		super(Transmute, self).onPlay(player, **kwargs)
-		card = player.selectCard(canBreak=False, message='Choose trash')
+		card = player.selectCard(message='Choose trash')
 		player.resolveEvent(Trash, frm=player.hand, card=card)
 		if 'ACTION' in card.types: player.resolveEvent(GainFromPile, frm=self.session.piles['Duchy'])
 		if 'TREASURE' in card.types: player.resolveEvent(GainFromPile, frm=self.session.piles['Transmute'])

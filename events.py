@@ -1,6 +1,14 @@
 from FullEvent import *
 import random
 
+class TriggerThisTurn(Continuous, Trigger):
+	name = 'BaseThisTurn'
+	defaultTerminatorTrigger = 'turnEnded'
+
+class ReplaceThisTurn(Continuous, Replacement):
+	name = 'BaseReplaceThisTurn'
+	defaultTerminatorTrigger = 'turnEnded'
+	
 class MoveCard(Event):
 	name = 'MoveCard'
 	def check(self, **kwargs):

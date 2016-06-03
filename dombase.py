@@ -75,7 +75,6 @@ class Game(EventSession):
 		self.landmarks = {}
 		self.activePlayer = None
 		self.globalMats = {}
-		self.emptyPiles = []
 		self.emptyTerminatorPiles = 0
 		self.events = []
 		self.turnFlag = ''
@@ -185,6 +184,11 @@ class Game(EventSession):
 	def addToken(self, token):
 		for player in self.players:
 			if not token.name in player.tokens: self.resolveEvent(MakeToken, token=token(self), player=player)
+	def getEmptyPiles(self):
+		piles = []
+		for key in self.piles:
+			if not self.piles[key]: piles.append(self.piles[key])
+		return piles
 	def checkGameEnd(self):
 		emptyPiles = 0
 		for pile in self.piles:
@@ -327,7 +331,7 @@ class Player(object):
 	def actionPhase(self, **kwargs):
 		self.session.dp.send(signal='actionPhase', player=self)
 		while True:
-			self.channelOut(self.request('stat'), 'resp', False)
+			#self.channelOut(self.request('stat'), 'resp', False)
 			self.session.resolveTriggerQueue()
 			if self.actions<1 or not self.hand: break
 			choice = self.user([o.view() for o in self.hand]+['EndActionPhase'], 'Choose action')
@@ -339,7 +343,7 @@ class Player(object):
 	def treasurePhase(self, **kwargs):
 		self.session.dp.send(signal='treasurePhase', player=self)
 		while True:
-			self.channelOut(self.request('stat'), 'resp', False)
+			#self.channelOut(self.request('stat'), 'resp', False)
 			if not self.hand: break
 			self.session.resolveTriggerQueue()
 			choice = self.user([o.view() for o in self.hand]+['PlayAllTreasures', 'EndTreasurePhase'], 'Choose treasure')
@@ -355,10 +359,10 @@ class Player(object):
 				self.session.resolveTriggerQueue()
 	def buyPhase(self, **kwargs):
 		self.session.dp.send(signal='buyPhase', player=self)
-		self.channelOut(self.request('king'), 'resp', False)
+		#self.channelOut(self.request('king'), 'resp', False)
 		if self.debt>0: self.resolveEvent(PayDebt)
 		while self.buys>0:
-			self.channelOut(self.request('stat'), 'resp', False)
+			#self.channelOut(self.request('stat'), 'resp', False)
 			pileList = list(self.session.piles)
 			self.session.resolveTriggerQueue()
 			choice = self.user(pileList+list(self.session.eventSupply)+['EndBuyPhase'], 'buySelection')
@@ -399,22 +403,28 @@ class Player(object):
 		#	card.onGameEnd(self)
 	def sessionEnd(self, **kwargs):
 		self.session = None
-	def selectCards(self, amnt, frm=None, canBreak=True, message='Choose cards', **kwargs):
+	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, **kwargs):
 		if frm==None: frm=self.hand
-		options = copy.copy(frm)
+		options = [o for o in copy.copy(frm) if not(restriction and not restriction(o))]
 		chosen = []
-		for i in range(amnt):
-			if not options: break
-			if canBreak:
+		def select():
+			if not options: return True
+			if optional:
 				choice = self.user([o.view() for o in options]+['Done choosing'], message)
-				if choice+1>len(options): break
+				if choice+1>len(options): return True
 			else: choice = self.user([o.view() for o in options], message)
 			chosen.append(options.pop(choice))
+		if amnt!=None:
+			for i in range(amnt):
+				if select(): break
+		else:
+			while not select(): pass
 		return chosen
-	def selectCard(self, frm=None, canBreak=True, message='Choose card', **kwargs):
+	def selectCard(self, frm=None, optional=False, message='Choose card', restriction=None, **kwargs):
 		if frm==None: frm=self.hand
 		if not frm: return
-		if canBreak:
+		frm = [o for o in frm if not (restriction and not restriction(o))]
+		if optional:
 			choice = self.user([o.view() for o in frm]+['Done choosing'], message)
 			if choice+1>len(frm): return
 		else: choice = self.user([o.view() for o in frm], message)
@@ -495,11 +505,7 @@ class Pile(CPile):
 		self.tokens = CPile(name=self.name+' Tokens', owner=self)
 	def gain(self, **kwargs):
 		if not self: return
-		popped = self.pop()
-		if not self:
-			self.session.emptyPiles.append(self)
-			if self.terminator: self.session.emptyTerminatorPiles += 1
-		return popped
+		return self.pop()
 	def getView(self):
 		top = self.viewTop()
 		if not top: top = self.maskot
