@@ -957,12 +957,12 @@ class Ambassador(Action, Attack):
 		if not revealedCard.name in player.session.piles: return
 		amnt = player.user(list(range(3)), 'Choose return amount')
 		returned = 0
-		for i in range(len(player.hand)-1, -1, -1):
+		for card in copy.copy(player.hand):
 			if returned==amnt: break
-			if player.hand[i].name==revealedCard.name:
-				player.resolveEvent(ReturnCard, card=player.hand[i], frm=player.hand)
+			if card.name==revealedCard.name:
+				player.resolveEvent(ReturnCard, card=card, frm=player.hand)
 				returned+=1
-		self.attackOpponents(player, pile=self.session.piles[revealedCard.name])
+		if card.frmPile.name in self.session.piles:	self.attackOpponents(player, pile=card.frmPile)
 	def attack(self, player, **kwargs):
 		player.resolveEvent(GainFromPile, frm=kwargs['pile'])
 
@@ -1410,6 +1410,9 @@ class CoinOfTheRealm(Treasure, Reserve):
 		Reserve.onPlay(self, player, **kwargs)
 	def call(self, **kwargs):
 		self.owner.resolveEvent(AddAction, amnt=2)
+	def onPileCreate(self, pile, session, **kwargs):
+		super(CoinOfTheRealm, self).onPileCreate(pile, session, **kwargs)
+		Reserve.onPileCreate(self, pile, session, **kwargs)
 		
 class Page(Action, Traveler):
 	name = 'Page'
@@ -1628,6 +1631,7 @@ class Teacher(Action, Reserve):
 		else: self.owner.resolveEvent(AddToken, to=self.session.piles[pile], token=token)
 	def onPileCreate(self, pile, session, **kwargs):
 		super(Teacher, self).onPileCreate(pile, session, **kwargs)
+		Reserve.onPileCreate(self, pile, session, **kwargs)
 		session.addToken(PlusCard)
 		session.addToken(PlusAction)
 		session.addToken(PlusBuy)
@@ -1719,4 +1723,52 @@ class Villa(Action):
 				self.owner.buyPhase()
 				break
 		
-empires = [CityQuarter, Villa]
+class Gladiator(Action):
+	name = 'Gladiator'
+	def __init__(self, session, **kwargs):
+		super(Gladiator, self).__init__(session, **kwargs)
+		self.coinPrice.set(3)
+	def onPlay(self, player, **kwargs):
+		super(Gladiator, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddCoin, amnt=2)
+		card = player.selectCard(message='Choose reveal')
+		if not card: return
+		player.resolveEvent(Reveal, card=card)
+		aplayer = self.session.getPreviousPlayer(player)
+		for c in aplayer.hand:
+			if c.name==card.name:
+				if aplayer.user(['no', 'yes'], 'Reveal '+c.view()): 
+					aplayer.resolveEvent(Reveal, card=c)
+					return
+				break
+		player.resolveEvent(AddCoin)
+		card = self.session.piles['Gladiator/Fortune'].viewTop()
+		if card and card.name=='Gladiator': player.resolveEvent(Trash, frm=self.session.piles['Gladiator/Fortune'], card=card)
+		
+class Fortune(Treasure):
+	name = 'Fortune'
+	def __init__(self, session, **kwargs):
+		super(Fortune, self).__init__(session, **kwargs)
+		self.coinPrice.set(8)
+		self.debtPrice.set(8)
+		self.connectCondition(Trigger, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def onPlay(self, player, **kwargs):
+		super(Fortune, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddBuy)
+		for i in range(len(self.session.events)-1, -1, -1):
+			if self.session.events[i][0]=='DoubleMoney' and self.session.events[i][1]['player']==player: return
+			elif self.session.events[i][0]=='startTurn': break
+		player.resolveEvent(DoubleMoney)
+	def conditionGain(self, **kwargs):
+		return kwargs['card']==self.card
+	def resolveGain(self, **kwargs):
+		for card in kwargs['player'].inPlay:
+			if card.name=='Gladiator': player.resolveEvent(GainFromPile, self.session.piles['Gold'])
+
+class GladiatorFortune(BaseCard):
+	name = 'Gladiator/Fortune'
+	def onPileCreate(self, pile, session, **kwargs):
+		for i in range(5): pile.addCard(Fortune)
+		for i in range(5): pile.addCard(Gladiator)
+		
+empires = [CityQuarter, Villa, GladiatorFortune]

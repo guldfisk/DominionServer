@@ -295,7 +295,7 @@ class Player(object):
 		self.uiupdate('oppo', 'mats', oppoV[3])
 	def toPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
-		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'Take']
+		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take']
 		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd']
 		keyBlackList = ['signal', 'source', 'session', 'hasReplaced', 'hidden', 'censored']
 		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner']
@@ -343,7 +343,6 @@ class Player(object):
 	def treasurePhase(self, **kwargs):
 		self.session.dp.send(signal='treasurePhase', player=self)
 		while True:
-			#self.channelOut(self.request('stat'), 'resp', False)
 			if not self.hand: break
 			self.session.resolveTriggerQueue()
 			choice = self.user([o.view() for o in self.hand]+['PlayAllTreasures', 'EndTreasurePhase'], 'Choose treasure')
@@ -359,16 +358,17 @@ class Player(object):
 				self.session.resolveTriggerQueue()
 	def buyPhase(self, **kwargs):
 		self.session.dp.send(signal='buyPhase', player=self)
-		#self.channelOut(self.request('king'), 'resp', False)
 		if self.debt>0: self.resolveEvent(PayDebt)
+		self.session.resolveTriggerQueue()
 		while self.buys>0:
-			#self.channelOut(self.request('stat'), 'resp', False)
-			pileList = list(self.session.piles)
-			self.session.resolveTriggerQueue()
-			choice = self.user(pileList+list(self.session.eventSupply)+['EndBuyPhase'], 'buySelection')
-			if choice+1>len(self.session.piles)+len(self.session.eventSupply): break
-			elif choice<len(self.session.piles): self.session.resolveEvent(PurchaseFromPile, frm=self.session.piles[pileList[choice]], player=self)
-			else: self.resolveEvent(PurchaseDEvent, card=self.session.eventSupply[list(self.session.eventSupply)[choice-len(self.session.piles)]])
+			pileMap = {self.session.piles[n].getView(): n for n in self.session.piles}
+			deventMap = {self.session.eventSupply[n].view(): n for n in self.session.eventSupply}
+			pileList = list(pileMap)
+			deventList = list(deventMap)
+			choice = self.user(pileList+deventList+['EndBuyPhase'], 'buySelection')
+			if choice+1>len(pileList)+len(deventList): break
+			elif choice<len(pileList): self.session.resolveEvent(PurchaseFromPile, frm=self.session.piles[pileMap[pileList[choice]]], player=self)
+			else: self.resolveEvent(PurchaseDEvent, card=self.session.eventSupply[deventMap[deventList[choice-len(pileList)]]])
 			self.session.resolveTriggerQueue()
 		if self.debt>0: self.resolveEvent(PayDebt)
 	def destroyAll(self, **kwargs):
@@ -406,6 +406,7 @@ class Player(object):
 	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, **kwargs):
 		if frm==None: frm=self.hand
 		options = [o for o in copy.copy(frm) if not(restriction and not restriction(o))]
+		if not options: return []
 		chosen = []
 		def select():
 			if not options: return True
@@ -424,6 +425,7 @@ class Player(object):
 		if frm==None: frm=self.hand
 		if not frm: return
 		frm = [o for o in frm if not (restriction and not restriction(o))]
+		if not frm: return
 		if optional:
 			choice = self.user([o.view() for o in frm]+['Done choosing'], message)
 			if choice+1>len(frm): return
@@ -616,6 +618,7 @@ class DEvent(WithPAs):
 		self.potionPrice = self.PA('potionPrice', kwargs.get('potionPrice', 0))
 		self.debtPrice = self.PA('potionPrice', kwargs.get('debtPrice', 0))
 		self.session = session
+		self.owner = None
 	def view(self, **kwargs):
 		ud = self.name+' '+str(self.coinPrice.access())+'$'
 		potions = self.potionPrice.access()
@@ -642,8 +645,7 @@ class Landmark(WithPAs):
 		else: return self.name
 	def onGameEnd(self, player, **kwargs):
 		pass
-
-		
+	
 class Treasure(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Treasure, self).__init__(session, **kwargs)
@@ -752,7 +754,7 @@ class Traveler(object):
 	def resolveEndTurn(self, **kwargs):
 		if not self.owner.user(('no', 'yes'), 'Upgrade '+self.view()): return
 		owner = self.owner
-		owner.resolveEvent(ReturnCard, frm=owner.inPlay, card=self.card)
+		owner.resolveEvent(PutBackCard, frm=owner.inPlay, card=self.card)
 		owner.resolveEvent(TakeFromPile, frm=self.session.NSPiles[self.morph.name])
 	def onPileCreate(self, pile, session, **kwargs):
 		session.require(self.morph)

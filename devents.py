@@ -6,8 +6,98 @@ class Alms(DEvent):
 		if not self.checkBefore(player): return
 		for card in player.inPlay:
 			if 'TREASURE' in card.types: return
-		options = []
 		player.gainCostingLessThan(5, canBreak=False)
+	
+class Borrow(DEvent):
+	name = 'Borrow'
+	def onBuy(self, player, **kwargs):
+		if not self.checkBefore(player): return
+		player.resolveEvent(AddBuy)
+		player.resolveEvent(TakeMinusDraw)
+		player.resolveEvent(AddCoin)
+
+class Quest(DEvent):
+	name = 'Quest'
+	def onBuy(self, player, **kwargs):
+		choice = player.user(('Attack', 'Two curses', 'Six cards'), 'Choose discard')
+		if choice==0:
+			card = player.selectCard(message='Choose discard', restriction=lambda o: 'ATTACK' in o.types)
+			if not card: return
+			player.resolveEvent(Discard, card=card)
+		if choice==1:
+			cards = player.selectCards(2, message='Choose discard', restriction=lambda o: o.name=='Curse')
+			if len(cards)<2: return
+			for card in cards: player.resolveEvent(Discard, card=card)
+		else:
+			cards = player.selectCards(6, message='Choose discard')
+			if len(cards)<6: return
+			for card in cards: player.resolveEvent(Discard, card=card)
+		player.resolveEvent(GainFromPile, frm=player.game.piles['Gold'])
+
+class Save(DEvent):
+	name = 'Save'
+	def __init__(self, game, **kwargs):
+		super(Save, self).__init__(game, **kwargs)
+		self.coinPrice.set(1)
+		game.addMat('Saving')
+		self.session.connectCondition(Trigger, trigger='startTurn', source=self, resolve=self.resolveBegin)
+	def onBuy(self, player, **kwargs):
+		if not self.checkBefore(player): return
+		player.resolveEvent(AddBuy)
+		card = player.selectCard(message='Choose save')
+		if not card: return
+		player.resolveEvent(MoveCard, frm=player.hand, to=player.mats['Saving'], card=card)
+	def resolveBegin(self, **kwargs):
+		for card in copy.copy(kwargs['player'].mats['Saving']): kwargs['player'].resolveEvent(MoveCard, frm=kwargs['player'].mats['Saving'], to=kwargs['player'].hand, card=card)
+		
+class ScoutingParty(DEvent):
+	name = 'Scouting Party'
+	def __init__(self, game, **kwargs):
+		super(ScoutingParty, self).__init__(game, **kwargs)
+		self.coinPrice.set(2)
+	def onBuy(self, player, **kwargs):
+		player.resolveEvent(AddBuy)
+		cards = player.resolveEvent(RequestCards, amnt=5)
+		chosen = player.selectCards(3, frm=cards, message='Choose discard')
+		for card in chosen: player.resolveEvent(Discard, frm=player.library, card=card)
+		remaining = [o for o in cards if not o in chosen]
+		while remaining:
+			card = player.selectCard(frm=remaining)
+			remaining.remove(card)
+			player.resolveEvent(MoveCard, frm=player.library, to=player.library, card=card)
+
+class TravelingFair(DEvent):
+	name = 'Traveling Fair'
+	class TravelingFairReplace(ReplaceThisTurn):
+		name = 'TravelingFairReplace'
+		defaultTrigger = 'Gain'
+		def condition(self, **kwargs):
+			return kwargs['player']==self.owner
+		def resolve(self, event, **kwargs):
+			return event.spawnClone(to=self.owner.library).resolve()
+	def __init__(self, game, **kwargs):
+		super(TravelingFair, self).__init__(game, **kwargs)
+		self.coinPrice.set(2)
+	def onBuy(self, player, **kwargs):
+		player.resolveEvent(AddBuy, amnt=2)
+		self.session.connectCondition(self.TravelingFairReplace, source=self, owner=player)
+
+class Bonfire(DEvent):
+	name = 'Bonfire'
+	def __init__(self, game, **kwargs):
+		super(Bonfire, self).__init__(game, **kwargs)
+		self.coinPrice.set(3)
+	def onBuy(self, player, **kwargs):
+		cards = player.selectCards(2, frm=player.inPlay, message='Choose trash')
+		for card in cards: player.resolveEvent(Trash, frm=player.inPlay, card=card)
+		
+class Expedition(DEvent):
+	name = 'Expedition'
+	def __init__(self, game, **kwargs):
+		super(Expedition, self).__init__(game, **kwargs)
+		self.coinPrice.set(3)
+	def onBuy(self, player, **kwargs):
+		player.eotdraw += 2
 	
 def viewEstate(self, **kwargs):
 	return Estate.name+'('+self.owner.mats['InheritanceMat'].viewTop().name+')'
@@ -57,4 +147,4 @@ class Inheritance(DEvent, EstateTurner):
 		for owned in player.owns:
 			if owned.frmPile.name=='Estate': self.turnEstate(owned, card.printedValues)
 		
-adventuresDEvents = [Alms, Inheritance]
+adventuresDEvents = [Alms, Inheritance, Borrow, Quest, Save, ScoutingParty, TravelingFair, Bonfire, Expedition]

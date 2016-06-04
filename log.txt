@@ -5515,3 +5515,48 @@ COMMAND, game, False
 969
 968
 967
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+39, 168
+COMMAND, conn, True
+COMMAND, game, False
+COMMAND, , False

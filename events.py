@@ -102,19 +102,32 @@ class Trash(Event):
 		self.spawn(LooseOwnership).resolve()
 		return self.trashedCard
 		
-class ReturnCard(Event):
-	name = 'ReturnCard'
+class PutBackCard(Event):
+	name = 'PutBackCard'
 	def setup(self, **kwargs):
-		name = self.card.printedValues.name
-		if not hasattr(self, 'to'):
-			if name in self.session.piles: self.to = self.session.piles[name]
-			elif name in self.session.NSPiles: self.to = self.session.NSPiles[name]
+		if not hasattr(self, 'to') and self.card.frmPile:
+			self.to = self.card.frmPile
 	def check(self, **kwargs):
+		if not hasattr(self, 'to'): return True
 		self.returnedCard = self.spawnTree(MoveCard).resolve()
 		if not self.returnedCard: return True
 	def payload(self, **kwargs):
 		self.spawn(LooseOwnership).resolve()
 		return self.returnedCard
+		
+class ReturnCard(Event):
+	name = 'ReturnCard'
+	def setup(self, **kwargs):
+		if not hasattr(self, 'to') and self.card.frmPile and self.card.frmPile.name in self.session.piles:
+			self.to = self.card.frmPile
+	def check(self, **kwargs):
+		if not hasattr(self, 'to'): return True
+		self.returnedCard = self.spawnTree(MoveCard).resolve()
+		if not self.returnedCard: return True
+	def payload(self, **kwargs):
+		self.spawn(LooseOwnership).resolve()
+		return self.returnedCard
+	 
 		
 class ResolveCard(Event):
 	name = 'ResolveCard'
@@ -348,3 +361,22 @@ class DiscardDeck(Event):
 	name = 'DiscardDeck'
 	def payload(self, **kwargs):
 		for card in copy.copy(self.player.library): self.spawnTree(MoveCard, frm=self.player.library, to=self.player.discardPile, card=card).resolve()
+		
+class DoubleMoney(Event):
+	name = 'DoubleMoney'
+	def payload(self, **kwargs):
+		self.spawnTree(AddCoin, amnt=self.player.coins)
+		
+class TakeMinusDraw(Event):
+	name = 'TakeMinusDraw'
+	def check(self, **kwargs):
+		if self.player.minusDraw: return False
+	def payload(self, **kwargs):
+		self.player.minusDraw = True
+		
+class TakeMinusCoin(Event):
+	name = 'TakeMinusCoin'
+	def check(self, **kwargs):
+		if self.player.minusCoin: return False
+	def payload(self, **kwargs):
+		self.player.minusCoin = True
