@@ -295,10 +295,10 @@ class Player(object):
 		self.uiupdate('oppo', 'mats', oppoV[3])
 	def toPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
-		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take']
+		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take', 'TakeMinusDraw', 'TakeMinusCoin', 'FlipJourney']
 		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd']
 		keyBlackList = ['signal', 'source', 'session', 'hasReplaced', 'hidden', 'censored']
-		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner']
+		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner', 'flags']
 		if signal in whiteList: s = [signal, {}]
 		elif signal[-6:]=='_begin' and signal[:-6] in eventWhiteList: s = [signal[:-6], {}]
 		else: return
@@ -361,8 +361,8 @@ class Player(object):
 		if self.debt>0: self.resolveEvent(PayDebt)
 		self.session.resolveTriggerQueue()
 		while self.buys>0:
-			pileMap = {self.session.piles[n].getView(): n for n in self.session.piles}
-			deventMap = {self.session.eventSupply[n].view(): n for n in self.session.eventSupply}
+			pileMap = {self.session.piles[n].getTopView(): n for n in self.session.piles}
+			deventMap = {self.session.eventSupply[n].getTopView(): n for n in self.session.eventSupply}
 			pileList = list(pileMap)
 			deventList = list(deventMap)
 			choice = self.user(pileList+deventList+['EndBuyPhase'], 'buySelection')
@@ -493,6 +493,8 @@ class Token(object):
 	def view(self, **kwargs):
 		if self.playerOwner: return self.playerOwner.name+':'+self.name
 		else: return self.name
+	def connectCondition(self, tp, **kwargs):
+		self.session.connectCondition(tp, **kwargs)
 	
 class Pile(CPile):
 	def __init__(self, cardType, session, *args, **kwargs):
@@ -511,7 +513,7 @@ class Pile(CPile):
 	def getView(self):
 		top = self.viewTop()
 		if not top: top = self.maskot
-		ud = top.name+' '+str(top.coinPrice.access())+'$'
+		ud = top.view()+' '+str(top.coinPrice.access())+'$'
 		potions = top.potionPrice.access()
 		debt = top.debtPrice.access()
 		if potions: ud += str(potions)+'P'
@@ -519,6 +521,10 @@ class Pile(CPile):
 		ud += ': '+str(len(self))
 		if self.tokens: ud += ' ('+self.tokens.getFullView()+')'
 		return ud
+	def getTopView(self):
+		top = self.viewTop()
+		if top: return top.view()
+		return self.maskot.view()
 	def associateCard(self, tp, **kwargs):
 		card = makeCard(self.session, tp, **kwargs)
 		card.frmPile = self
@@ -626,6 +632,8 @@ class DEvent(WithPAs):
 		if potions: ud += str(potions)+'P'
 		if debt: ud += str(debt)+'D'
 		return ud
+	def getTopView(self, **kwargs):
+		return self.name
 	def onBuy(self, player, **kwargs):
 		pass
 	def checkBefore(self, player, **kwargs):
@@ -633,6 +641,8 @@ class DEvent(WithPAs):
 			if player.session.events[i][0]=='BuyDEvent' and player.session.events[i][1]['card'].name==self.name: return False
 			elif player.session.events[i][0]=='startTurn': break
 		return True
+	def connectCondition(self, tp, **kwargs):
+		self.session.connectCondition(tp, **kwargs)
 
 class Landmark(WithPAs):
 	name = 'BaseLandmark'
@@ -758,8 +768,6 @@ class Traveler(object):
 		owner.resolveEvent(TakeFromPile, frm=self.session.NSPiles[self.morph.name])
 	def onPileCreate(self, pile, session, **kwargs):
 		session.require(self.morph)
-	
-
 	
 if __name__=='__main__':
 	random.seed()

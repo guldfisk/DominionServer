@@ -128,7 +128,6 @@ class ReturnCard(Event):
 		self.spawn(LooseOwnership).resolve()
 		return self.returnedCard
 	 
-		
 class ResolveCard(Event):
 	name = 'ResolveCard'
 	def payload(self, **kwargs):
@@ -156,13 +155,14 @@ class AddCoin(Event):
 	name = 'AddCoin'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'amnt'): self.amnt = 1
-		if self.amnt==0: return True
-	def payload(self, **kwargs):
-		amn = self.amnt
+	def check(self, **kwargs):
+		if self.amnt<1: return True
 		if self.player.minusCoin:
-			amn -= 1
+			self.amnt -= 1
 			self.player.minusCoin = False
-		self.player.coins += amn
+		if self.amnt<1: return True
+	def payload(self, **kwargs):
+		self.player.coins += self.amnt
 		
 class AddPotion(Event):
 	name = 'AddPotion'
@@ -234,6 +234,9 @@ class Draw(Event):
 		self.frm = self.player.library
 		self.to = self.player.hand
 	def check(self, **kwargs):
+		if self.player.minusDraw:
+			self.player.minusDraw = False
+			return True
 		self.card = self.spawnTree(RequestCard).resolve()
 		if not self.card: return True
 	def payload(self, **kwargs):
@@ -243,6 +246,12 @@ class DrawCards(Event):
 	name = 'DrawCards'
 	def setup(self, **kwargs):
 		if not hasattr(self, 'amnt'): self.amnt = 1
+	def check(self, **kwargs):
+		if self.amnt<1: return True
+		if self.player.minusDraw:
+			self.player.minusDraw = False
+			self.amnt -= 1
+		if self.amnt<1: return True
 	def payload(self, **kwargs):
 		for i in range(self.amnt):
 			if not self.spawnTree(Draw).resolve(): break
@@ -301,13 +310,13 @@ class PurchaseFromPile(Event):
 class FlipJourney(Event):
 	name = 'FlipJourney'
 	def payload(self, **kwargs):
-		player.journey = not player.journey
-		return player.journey
+		self.player.journey = not self.player.journey
+		return self.player.journey
 		
 class PayDebt(Event):
 	name = 'PayDebt'
 	def check(self, **kwargs):
-		if self.player.debt<1: return
+		if self.player.debt<1: return True
 	def payload(self, **kwargs):
 		amount = self.player.user(list(range(min(self.player.debt, self.player.coins)+1)), 'Choose amount')
 		if amount==0: return
