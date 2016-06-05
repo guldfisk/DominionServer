@@ -1,24 +1,11 @@
-import multiprocessing
-import time
 
-# bar
-def bar():
-    for i in range(100):
-        print('Tick')
-        time.sleep(1)
 
-if __name__ == '__main__':
-    # Start bar as a process
-    p = multiprocessing.Process(target=bar)
-    p.start()
+def wow(**kwargs):
+	print(kwargs)
+	kwargs.pop('et', None)
+	print(kwargs)
 
-    # Wait for 10 seconds or until process finishes
-    p.join(10)
 
-    # If thread is still active
-    if p.is_alive():
-        print("running... let's kill it...")
+d = {'et': 1, 'to': 2}
 
-        # Terminate
-        p.terminate()
-        p.join()
+wow(**d)

@@ -314,3 +314,55 @@ class Pathfinding(DEvent):
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 	
 adventuresDEvents = [Alms, Borrow, Quest, Save, ScoutingParty, TravelingFair, Bonfire, Expedition, Ferry, Plan, Mission, Pilgrimage, Ball, Raid, Seaway, Trade, LostArts, Training, Inheritance, Pathfinding]
+
+class Summon(DEvent):
+	name = 'Summon'
+	def __init__(self, session, **kwargs):
+		super(Summon, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+		session.addMat('Summoning')
+		self.connectCondition(Trigger, trigger='startTurn', source=self, resolve=self.resolveBegin)
+		self.connectCondition(Replacement, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def onBuy(self, player, **kwargs):
+		player.gainCostingLessThan(5, source=self, restriction=lambda o: 'ACTION' in o.types)
+	def resolveBegin(self, **kwargs):
+		for card in copy.copy(kwargs['player'].mats['Summoning']): kwargs['player'].resolveEvent(CastCard, frm=kwargs['player'].mats['Summoning'], card=card)
+	def conditionGain(self, **kwargs):
+		return kwargs['source']==self
+	def resolveGain(self, event, **kwargs):
+		event.spawnClone().resolve()
+		return event.spawn(MoveCard, frm=event.to, to=event.player.mats['Summoning']).resolve()
+	
+promoDEvents = [Summon]
+
+class Triumph(DEvent):
+	name = 'Triumph'
+	def __init__(self, session, **kwargs):
+		super(Triumph, self).__init__(session, **kwargs)
+		self.debtPrice.set(5)
+	def onBuy(self, player, **kwargs):		
+		if not player.resolveEvent(GainFromPile, frm=self.session.piles['Estate']): return
+		gained = 0
+		for i in range(len(self.session.events)-1, -1, -1):
+			if self.session.events[i][0]=='Gain' and self.session.events[i][1]['player']==player: gained+=1
+			elif self.session.events[i][0]=='startTurn': break
+		player.resolveEvent(AddVictory, amnt=gained)
+		
+class Windfall(DEvent):
+	name = 'Windfall'
+	def __init__(self, session, **kwargs):
+		super(Windfall, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+	def onBuy(self, player, **kwargs):		
+		if not player.library and not player.discardPile:
+			for i in range(3): player.resolveEvent(GainFromPile, frm=self.session.piles['Gold'])
+		
+class Dominate(DEvent):
+	name = 'Dominate'
+	def __init__(self, session, **kwargs):
+		super(Dominate, self).__init__(session, **kwargs)
+		self.coinPrice.set(14)
+	def onBuy(self, player, **kwargs):		
+		if player.resolveEvent(GainFromPile, frm=self.session.piles['Province']): player.resolveEvent(AddVictory, amnt=9)
+		
+empiresDEvents = [Triumph, Windfall, Dominate]

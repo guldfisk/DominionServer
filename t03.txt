@@ -1,6 +1,0 @@
-import dombase
-
-slist = dombase.CPile([1, 2, 3])
-
-print(slist.index(2))
-print(slist.index(4))

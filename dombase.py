@@ -13,8 +13,6 @@ class Log(object):
 			self.out.write(str(arg))
 		self.out.write(end)
 
-l = Log()
-			
 class CPile(list):
 	def __init__(self, *args, **kwargs):
 		super(CPile, self).__init__(*args)
@@ -348,9 +346,9 @@ class Player(object):
 			choice = self.user([o.view() for o in self.hand]+['PlayAllTreasures', 'EndTreasurePhase'], 'Choose treasure')
 			if choice>len(self.hand): break
 			if choice==len(self.hand):
-				for i in range(len(self.hand)-1, -1, -1):
-					if not 'TREASURE' in self.hand[i].types: continue
-					self.session.resolveEvent(CastCard, card=self.hand[i], player=self)
+				for card in copy.copy(self.hand):
+					if not 'TREASURE' in card.types: continue
+					self.session.resolveEvent(CastCard, card=card, player=self)
 					self.session.resolveTriggerQueue()
 				break
 			elif 'TREASURE' in self.hand[choice].types:
@@ -403,14 +401,14 @@ class Player(object):
 		#	card.onGameEnd(self)
 	def sessionEnd(self, **kwargs):
 		self.session = None
-	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, **kwargs):
+	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, minimum=0, **kwargs):
 		if frm==None: frm=self.hand
 		options = [o for o in copy.copy(frm) if not(restriction and not restriction(o))]
 		if not options: return []
 		chosen = []
 		def select():
 			if not options: return True
-			if optional:
+			if optional and len(chosen)>=minimum:
 				choice = self.user([o.view() for o in options]+['Done choosing'], message)
 				if choice+1>len(options): return True
 			else: choice = self.user([o.view() for o in options], message)
@@ -471,13 +469,13 @@ class Player(object):
 		return self.session.piles[options[choice]]
 	def gainCostingLessThan(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
 		pile = self.pileCostingLess(coin, potion, debt, card, optional, restriction, **kwargs)
-		if pile: self.resolveEvent(GainFromPile, frm=pile)
+		if pile: self.resolveEvent(GainFromPile, frm=pile, **kwargs)
 	def gainCosting(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
 		pile = self.pileCosting(coin, potion, debt, card, optional, restriction, **kwargs)
-		if pile: self.resolveEvent(GainFromPile, frm=pile)
+		if pile: self.resolveEvent(GainFromPile, frm=pile, **kwargs)
 	def gain(self, optional=False, restriction=False, **kwargs):
 		pile = self.getPile(optional, restriction, **kwargs)
-		if pile: self.resolveEvent(GainFromPile, frm=pile)
+		if pile: self.resolveEvent(GainFromPile, frm=pile, **kwargs)
 	
 class Token(object):
 	name = 'baseToken'
@@ -502,6 +500,7 @@ class Pile(CPile):
 		self.session = session
 		self.cardType = cardType
 		self.maskot = self.associateCard(cardType)
+		print(cardType)
 		self.maskot.disconnect()
 		self.terminator = kwargs.get('terminator', False)
 		self.maskot.onPileCreate(self, session)
