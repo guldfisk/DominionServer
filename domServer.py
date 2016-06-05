@@ -102,7 +102,6 @@ class OnlinePlayer(server.CST):
 		else:
 			game.makeDEvents(random.sample(allDEvents, random.randint(0, 2)))
 			game.makeLandmarks(random.sample(landmarks, random.randint(0, 2)))
-			#piles = random.sample(empires, 2)
 			piles = random.sample(options, 10)
 			game.makePiles(piles)
 		if printEvents: game.dp.connect(self.evLogger)

@@ -171,7 +171,7 @@ class Bureaucrat(Action, Attack):
 		player.resolveEvent(GainFromPile, frm=player.session.piles['Silver'], to=player.library)
 		self.attackOpponents(player)
 	def attack(self, player, **kwargs):
-		if True in ['Victory' in o.types for o in player.hand]:
+		if not True in ['Victory' in o.types for o in player.hand]:
 			for card in player.hand: player.resolveEvent(Reveal, card=card)
 			return
 		while True:
@@ -964,6 +964,7 @@ class Ambassador(Action, Attack):
 			if card.name==revealedCard.name:
 				player.resolveEvent(ReturnCard, card=card, frm=player.hand)
 				returned+=1
+			break
 		if card.frmPile.name in self.session.piles:	self.attackOpponents(player, pile=card.frmPile)
 	def attack(self, player, **kwargs):
 		player.resolveEvent(GainFromPile, frm=kwargs['pile'])
@@ -1202,7 +1203,7 @@ class MerchantShip(Action, Duration):
 		super(MerchantShip, self).onPlay(player, **kwargs)
 		Duration.onPlay(self, player, **kwargs)
 		player.resolveEvent(AddCoin, amnt=2)
-	def next(self, **kwargs):
+	def duration(self, **kwargs):
 		self.owner.resolveEvent(AddCoin, amnt=2)
 
 class Outpost(Action, Duration):
@@ -1920,7 +1921,7 @@ class Crown(Action, Treasure):
 		return event.spawnClone().resolve()
 
 class GroundsKeeper(Action):
-	name = 'Grounds Keeper'
+	name = 'Groundskeeper'
 	def __init__(self, session, **kwargs):
 		super(GroundsKeeper, self).__init__(session, **kwargs)
 		self.coinPrice.set(5)
@@ -1961,6 +1962,26 @@ class Enchantress(Action, Duration, Attack):
 	def attack(self, player, **kwargs):
 		self.session.connectCondition(self.EnchantressAttack, source=self.card, attacking=player)
 
+class ChariotRace(Action):
+	name = 'Chariot Race'
+	def __init__(self, session, **kwargs):
+		super(ChariotRace, self).__init__(session, **kwargs)
+		self.coinPrice.set(3
+	def onPlay(self, player, **kwargs):
+		super(BustlingVillage, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddAction)
+		card = player.resolveEvent(RequestCard)
+		if not card: return
+		player.resolveEvent(Reveal, card=card)
+		player.resolveEvent(MoveCard, frm=player.library, to=player.hand, card=card)
+		aplayer = self.session.getNextPlayer(player)
+		if card:
+			acard = aplayer.resolveEvent(Reveal, card=card)
+			if not acard.costLessThan(card): return
+		player.resolveEvent(AddCoin)
+		player.resolveEvent(AddVictory)
 		
-	
+class VP(Token):
+	name = 'VP Token'
+		
 empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress]

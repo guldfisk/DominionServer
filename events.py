@@ -363,6 +363,24 @@ class MakeToken(Event):
 		self.token.playerOwner = self.player
 		self.player.tokens[self.token.name] = self.token
 		
+class DestroyToken(Event):
+	name = 'DestroyToken'
+	def check(self, **kwargs):
+		if not self.token is self.frm: return True
+	def payload(self, **kwargs):
+		self.frm.remove(self.token)
+		return True
+		
+class TakeVPs(Event):
+	name = 'TakeVPs'
+	def payload(self, **kwargs):
+		self.amnt = 0
+		for token in self.frm:
+			if token.name = 'VP Token':
+				if self.spawnTree(DestroyToken, token=token).resolve(): self.amnt+=1
+		self.spawnTree(AddVictory).resolve()
+				
+		
 class ResolveDuration(Event):
 	name = 'ResolveDuration'
 	def payload(self, **kwargs):

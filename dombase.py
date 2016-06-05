@@ -692,7 +692,6 @@ class Cursed(BaseCard):
 		player.resolveEvent(AddVidtory, amnt=self.victoryValue.access())
 		
 class Reaction(object):
-	triggerSignal = 'Any'
 	def __init__(self, session, **kwargs):
 		if not hasattr(self, 'types'): self.types = set()
 		self.types.add('REACTION')
@@ -767,6 +766,11 @@ class Traveler(object):
 		owner.resolveEvent(TakeFromPile, frm=self.session.NSPiles[self.morph.name])
 	def onPileCreate(self, pile, session, **kwargs):
 		session.require(self.morph)
+	
+class Gathering(object):
+	def __init__(self, session, **kwargs):
+		if not hasattr(self, 'types'): self.types = set()
+		self.types.add('GATHERING')
 	
 if __name__=='__main__':
 	random.seed()
