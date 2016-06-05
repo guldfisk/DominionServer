@@ -702,9 +702,9 @@ class Attack(object):
 		self.types.add('ATTACK')
 	def attackOpponents(self, player, **kwargs):
 		for aplayer in player.session.getPlayers(player):
-			if aplayer!=player: player.resolveEvent(ResolveAttack, source=self, attack=self.attack, victim=aplayer, **kwargs)
+			if aplayer!=player: player.resolveEvent(ResolveAttack, source=self.card, attack=self.attack, victim=aplayer, **kwargs)
 	def attackAll(self, player, **kwargs):
-		for aplayer in player.session.getPlayers(player): player.resolveEvent(ResolveAttack, source=self, attack=self.attack, victim=aplayer, **kwargs)
+		for aplayer in player.session.getPlayers(player): player.resolveEvent(ResolveAttack, source=self.card, attack=self.attack, victim=aplayer, **kwargs)
 	def attack(self, player, **kwargs):
 		pass
 			

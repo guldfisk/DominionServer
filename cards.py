@@ -95,7 +95,7 @@ class Chapel(Action):
 		self.coinPrice.set(2)
 	def onPlay(self, player, **kwargs):
 		super(Chapel, self).onPlay(player, **kwargs)
-		for card in player.selectCards(4, optional=True): player.resolveEvent(Trash, frm=player, card=card)
+		for card in player.selectCards(4, optional=True): player.resolveEvent(Trash, frm=player.hand, card=card)
 	
 class Moat(Action, Reaction):
 	name = 'Moat'
@@ -907,7 +907,7 @@ class Lighthouse(Action, Duration):
 	def duration(self, **kwargs):
 		self.owner.resolveEvent(AddCoin)
 	def conditionReact(self, **kwargs):
-		return self.owner and self in self.owner.inPlay and 'ATTACK' in kwargs['card'].types and not self.owner==kwargs['player']
+		return self.owner and self.card in self.owner.inPlay and 'ATTACK' in kwargs['card'].types and self.owner!=kwargs['player']
 	def resolveReact(self, event, **kwargs):
 		self.session.connectCondition(self.LighthouseProtect, source=self.card, enemy=event.card)
 		return event.spawnClone().resolve()
@@ -1502,7 +1502,7 @@ class Champion(Action, Duration):
 		Duration.__init__(self, session, **kwargs)
 		self.connectCondition(Replacement, trigger='PlayCard', source=self.card, resolve=self.resolveProtect, condition=self.conditionProtect)
 		self.connectCondition(Trigger, trigger='PlayCard', source=self.card, resolve=self.resolveAction, condition=self.conditionAction)
-		self.price = 6
+		self.coinPrice.set(6)
 	def onPlay(self, player, **kwargs):
 		player.resolveEvent(AddAction)
 	def conditionDestroy(self, **kwargs):
@@ -1633,8 +1633,8 @@ class Teacher(Action, Reserve):
 		if token.owner: self.owner.resolveEvent(MoveToken, frm=token.owner.tokens, to=self.session.piles[pile], token=token)
 		else: self.owner.resolveEvent(AddToken, to=self.session.piles[pile], token=token)
 	def onPileCreate(self, pile, session, **kwargs):
-		super(Teacher, self).onPileCreate(pile, session, **kwargs)
 		Reserve.onPileCreate(self, pile, session, **kwargs)
+		for i in range(5): pile.addCard(type(self))
 		session.addToken(PlusCard)
 		session.addToken(PlusAction)
 		session.addToken(PlusBuy)
@@ -1984,4 +1984,15 @@ class ChariotRace(Action):
 class VP(Token):
 	name = 'VP Token'
 		
-empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress]
+class FarmersMarket(Action, Gathering):
+	name = "Farmer's Market"
+	def __init__(self, session, **kwargs):
+		super(ChariotRace, self).__init__(session, **kwargs)
+		Gathering.__init__(self, session, **kwargs)
+		self.coinPrice.set(3)
+	def onPlay(self, player, **kwargs):
+		super(BustlingVillage, self).onPlay(player, **kwargs)
+		player.resolveEvent()
+		
+		
+empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress, ChariotRace]
