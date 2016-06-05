@@ -376,7 +376,7 @@ class TakeVPs(Event):
 	def payload(self, **kwargs):
 		self.amnt = 0
 		for token in self.frm:
-			if token.name = 'VP Token':
+			if token.name=='VP Token':
 				if self.spawnTree(DestroyToken, token=token).resolve(): self.amnt+=1
 		self.spawnTree(AddVictory).resolve()
 				

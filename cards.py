@@ -1966,7 +1966,7 @@ class ChariotRace(Action):
 	name = 'Chariot Race'
 	def __init__(self, session, **kwargs):
 		super(ChariotRace, self).__init__(session, **kwargs)
-		self.coinPrice.set(3
+		self.coinPrice.set(3)
 	def onPlay(self, player, **kwargs):
 		super(BustlingVillage, self).onPlay(player, **kwargs)
 		player.resolveEvent(AddAction)

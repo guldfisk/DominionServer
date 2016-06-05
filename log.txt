@@ -115,3 +115,15 @@ COMMAND, game, False
 965
 964
 COMMAND, conc, False
+39, 168
+COMMAND, host lost-world.dk, False
+COMMAND, conn, True
+39, 168
+COMMAND, host lost-world.dk, False
+COMMAND, conn, True
+39, 168
+COMMAND, host lost-world.dk, False
+COMMAND, conn, True
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
