@@ -612,3 +612,9 @@ COMMAND, conn, True
 39, 168
 COMMAND, conn, True
 COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False
+39, 168
+COMMAND, conn, True
+COMMAND, debu, False

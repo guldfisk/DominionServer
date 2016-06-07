@@ -705,7 +705,7 @@ class Venture(Treasure):
 			if not card: break
 			player.resolveEvent(Reveal, card=card)
 			if 'TREASURE' in card.types:
-				player.resolveEvent(CasrCard, frm=player.library, card=card)
+				player.resolveEvent(CastCard, frm=player.library, card=card)
 				break
 			else: player.resolveEvent(MoveCard, frm=player.library, to=aside, card=card)
 		for card in copy.copy(aside): player.resolveEvent(Discard, frm=aside, card=card)
