@@ -435,6 +435,16 @@ class Player(object):
 			if choice+1>len(frm): return
 		else: choice = self.user([o.view() for o in frm], message)
 		return frm[choice]
+	def selectPile(self, optional=False, restriction=False, **kwargs):
+		options = []
+		for key in self.session.piles:
+			if not (restriction and not restriction(self.session.piles[key].maskot)): options.append(key)
+		if not options: return
+		if optional:
+			choice = self.user(options+['No pile'], 'Choose pile')
+			if choice+1>len(options): return
+		else: choice = self.user(options, 'Choose pile')
+		return self.session.piles[options[choice]]
 	def getPile(self, optional=False, restriction=None, **kwargs):
 		options = []
 		for key in self.session.piles:

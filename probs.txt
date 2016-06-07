@@ -23,3 +23,6 @@ Andet shit--------------------------------------------------------------
 *Tokens er virkeligt inkonsistente, og VP-counters er ikke tokens, selv om de nok burde være det.
 *Ekstra ture er håndteret virkeligt dumt
 *Event-log lookups er fucking cancer
+*Contraband burde sige hva banned
+*save burde ikke være public
+*switch and library ui

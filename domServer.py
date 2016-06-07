@@ -138,6 +138,12 @@ class OnlinePlayer(server.CST):
 			if self.player.payload: self.sendPayload('ques', self.player.payload)
 		elif streng=='conc':
 			self.player.game.concede(self.player)
+		elif streng=='name':
+			l = self.recvLen()
+			ll = struct.unpack('I', l)[0]
+			n = self.recvLen(ll)
+			nn = n.decode('UTF-8')
+			self.playerName = nn
 		elif self.player: 
 			self.player.answerF(struct.unpack('I', ind)[0])
 	def use(self, options, name='noName'):

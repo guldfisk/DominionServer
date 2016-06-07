@@ -3,6 +3,7 @@ import time
 import threading
 import curses.textpad
 import sys
+import os
 import math
 import socket
 import threading		
@@ -11,6 +12,7 @@ import pickle
 import re
 
 s = None
+name = None
 PORT = 6700
 HOST = 'localhost'
 
@@ -84,7 +86,7 @@ class ScrollWithInput(object):
 		if c==curses.KEY_UP:
 			if not self.pos<1: self.pos -= 1
 			self.refresh()
-			log(self.pos)
+			#log(self.pos)
 		elif c==curses.KEY_DOWN:
 			if not self.pos>self.scrollDepth-self.height-2: self.pos += 1
 			self.refresh()
@@ -101,7 +103,7 @@ class ScrollWithInput(object):
 			if not self.running: continue
 			self.command(s[:-1])
 			self.iw.clear()
-			#self.log.addstr(self.scrollDepth-1, 0, s+'\n')
+			self.log.addstr(self.scrollDepth-1, 0, s+'\n')
 			self.addstr(s)
 			self.refresh()
 	def refresh(self):
@@ -115,8 +117,12 @@ class ScrollWithInput(object):
 		self.log.refresh(self.pos, 0, self.windowY, self.windowX, self.windowY+self.height, self.windowX+self.width+1)
 		
 class NetInput(ScrollWithInput):
+	def setName(self, n):
+		nn = n.encode('UTF-8')
+		nl = struct.pack('I', len(nn))
+		s.send('name'.encode('UTF-8')+nl+nn)
 	def command(self, string):
-		log('COMMAND', string, string=='conn')
+		#log('COMMAND', string, string=='conn')
 		if re.match('host ?.+', string, re.IGNORECASE):
 			global HOST
 			HOST = re.match('host ?(.+)', string, re.IGNORECASE).groups()[0]
@@ -127,10 +133,18 @@ class NetInput(ScrollWithInput):
 			s.connect((HOST, PORT))
 			l = traa(lyt)
 			l.start()
+			if name: self.setName(name)
 			updateNetstat()
 		elif string=='conc':
 			ipbuf.add('')
 			s.send(string.encode('UTF-8'))
+		elif re.match('name ?.+', string, re.IGNORECASE):
+			n = re.match('name ?(.+)', string, re.IGNORECASE).groups()[0]
+			if s:
+				self.setName(n)
+			else:
+				global name
+				name = n
 		elif s: s.send(string.encode('UTF-8'))
 
 class GameInput(ScrollWithInput):
@@ -225,11 +239,16 @@ def nstart(stdscr):
 	for zone in kingdom.zones: kingdom.setZone(zone, zone)
 	for zone in opponent.zones: opponent.setZone(zone, zone)
 	trash.addstr('trash')
-	trash.refresh()	
+	trash.refresh()
+	if os.path.exists('cccnfg.cfg'):
+		with open('cccnfg.cfg', 'r') as f:
+			for ln in f.read().splitlines():
+				log(ln)
+				cw.command(ln)
 	while True:
-		cw.run()	
+		cw.run()
 		logw.run()
-	
+		
 def updateNetstat():
 	netstatw.clear()
 	netstatw.addstr(str(HOST)+', '+str(PORT)+', '+str(s))

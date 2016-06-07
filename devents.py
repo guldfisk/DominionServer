@@ -129,7 +129,7 @@ class Ferry(DEvent):
 		session.addToken(MinusCost)
 	def onBuy(self, player, **kwargs):
 		token = player.tokens['Minus Cost']
-		pile = player.getPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
@@ -141,7 +141,7 @@ class Plan(DEvent):
 		session.addToken(TrashingToken)
 	def onBuy(self, player, **kwargs):
 		token = player.tokens['Trashing Token']
-		pile = player.getPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
@@ -237,7 +237,7 @@ class LostArts(DEvent):
 		session.addToken(PlusAction)
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Action Token']
-		pile = player.getPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
@@ -249,7 +249,7 @@ class Training(DEvent):
 		session.addToken(PlusCoin)
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Coin Token']
-		pile = player.getPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
@@ -309,7 +309,7 @@ class Pathfinding(DEvent):
 		session.addToken(PlusCard)
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Card Token']
-		pile = player.getPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 	
