@@ -964,8 +964,7 @@ class Ambassador(Action, Attack):
 			if card.name==revealedCard.name:
 				player.resolveEvent(ReturnCard, card=card, frm=player.hand)
 				returned+=1
-			break
-		if card.frmPile.name in self.session.piles:	self.attackOpponents(player, pile=card.frmPile)
+		if revealedCard.frmPile.name in self.session.piles:	self.attackOpponents(player, pile=revealedCard.frmPile)
 	def attack(self, player, **kwargs):
 		player.resolveEvent(GainFromPile, frm=kwargs['pile'])
 

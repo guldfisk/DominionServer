@@ -109,8 +109,12 @@ class Game(EventSession):
 		self.events.append((signal, kwargs))
 	def evClean(self):
 		self.resolveTriggerQueue()
+	def fixNames(self, **kwargs):
+		for player in self.players:
+			while player.name in [p.name for p in self.players if not p==player]: player.name+='_'
 	def start(self, **kwargs):
 		self.running = True
+		self.fixNames()
 		self.round = 0
 		self.dp.connect(self.evLogger)
 		for player in self.players: self.dp.connect(player.toPlayer)

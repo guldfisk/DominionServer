@@ -103,7 +103,7 @@ class ScrollWithInput(object):
 			if not self.running: continue
 			self.command(s[:-1])
 			self.iw.clear()
-			self.log.addstr(self.scrollDepth-1, 0, s+'\n')
+			#self.log.addstr(self.scrollDepth-1, 0, s+'\n')
 			self.addstr(s)
 			self.refresh()
 	def refresh(self):
