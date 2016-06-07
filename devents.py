@@ -24,7 +24,7 @@ class Quest(DEvent):
 			card = player.selectCard(message='Choose discard', restriction=lambda o: 'ATTACK' in o.types)
 			if not card: return
 			player.resolveEvent(Discard, card=card)
-		if choice==1:
+		elif choice==1:
 			cards = player.selectCards(2, message='Choose discard', restriction=lambda o: o.name=='Curse')
 			if len(cards)<2: return
 			for card in cards: player.resolveEvent(Discard, card=card)
