@@ -8,6 +8,14 @@ import threading
 import struct
 import socket
 
+class probMap(list):
+	def get(self, val):
+		sum = 0
+		for i in range(len(self)):
+			sum += self[i]
+			if val<=sum: return i
+		return len(self)-1
+
 class traa(threading.Thread):
 	def __init__(self, f, **kwargs):
 		threading.Thread.__init__(self)
@@ -56,6 +64,8 @@ class OnlinePlayer(server.CST):
 		self.defaultRecvLen = 4
 		self.player = None
 		self.indents = []
+		self.deventPM = probMap((0.1, 0.5, 0.4))
+		self.landmarkPM = probMap((0.1, 0.5, 0.4))
 	def linkPlayer(self, player):
 		self.player = player
 		player.oplayer = self
@@ -100,8 +110,8 @@ class OnlinePlayer(server.CST):
 			game.makeDEvents(allDEvents)
 			game.makeLandmarks(landmarks)
 		else:
-			game.makeDEvents(random.sample(allDEvents, random.randint(0, 2)))
-			game.makeLandmarks(random.sample(landmarks, random.randint(0, 2)))
+			game.makeDEvents(random.sample(allDEvents, self.deventPM.get(random.random())))
+			game.makeLandmarks(random.sample(landmarks, self.landmarkPM.get(random.random())))
 			piles = random.sample(options, 10)
 			game.makePiles(piles)
 		if printEvents: game.dp.connect(self.evLogger)

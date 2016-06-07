@@ -296,7 +296,7 @@ class Player(object):
 		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take', 'TakeMinusDraw', 'TakeMinusCoin', 'FlipJourney']
 		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd']
 		keyBlackList = ['signal', 'source', 'session', 'hasReplaced', 'hidden', 'censored']
-		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner', 'flags']
+		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner', 'flags', 'round']
 		if signal in whiteList: s = [signal, {}]
 		elif signal[-6:]=='_begin' and signal[:-6] in eventWhiteList: s = [signal[:-6], {}]
 		else: return
@@ -500,7 +500,6 @@ class Pile(CPile):
 		self.session = session
 		self.cardType = cardType
 		self.maskot = self.associateCard(cardType)
-		print(cardType)
 		self.maskot.disconnect()
 		self.terminator = kwargs.get('terminator', False)
 		self.maskot.onPileCreate(self, session)
@@ -701,10 +700,14 @@ class Attack(object):
 		if not hasattr(self, 'types'): self.types = set()
 		self.types.add('ATTACK')
 	def attackOpponents(self, player, **kwargs):
+		results = []
 		for aplayer in player.session.getPlayers(player):
-			if aplayer!=player: player.resolveEvent(ResolveAttack, source=self.card, attack=self.attack, victim=aplayer, **kwargs)
+			if aplayer!=player: results.append(player.resolveEvent(ResolveAttack, source=self.card, attack=self.attack, victim=aplayer, **kwargs))
+		return results
 	def attackAll(self, player, **kwargs):
-		for aplayer in player.session.getPlayers(player): player.resolveEvent(ResolveAttack, source=self.card, attack=self.attack, victim=aplayer, **kwargs)
+		results = []
+		for aplayer in player.session.getPlayers(player): results.append(player.resolveEvent(ResolveAttack, source=self.card, attack=self.attack, victim=aplayer, **kwargs))
+		return results
 	def attack(self, player, **kwargs):
 		pass
 			

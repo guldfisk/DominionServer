@@ -338,7 +338,7 @@ class ResolveAttack(Event):
 	def payload(self, **kwargs):
 		d = copy.copy(self.__dict__)
 		d.pop('player', None)
-		self.attack(self.victim, **d)
+		return self.attack(self.victim, **d)
 		
 class MoveToken(Event):
 	name = 'MoveToken'

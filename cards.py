@@ -754,7 +754,7 @@ class Hoard(Treasure):
 		self.coinValue.set(2)
 		self.connectCondition(Trigger, trigger='Buy', source=self, resolve=self.resolveBuy, condition=self.conditionBuy)
 	def conditionBuy(self, **kwargs):
-		return self.owner and self.card in self.owner.inPlay
+		return self.owner and self.card in self.owner.inPlay and 'VICTORY' in kwargs['card'].types
 	def resolveBuy(self, **kwargs):
 		self.owner.resolveEvent(GainFromPile, frm=self.session.piles['Gold'])
 	
@@ -1101,19 +1101,22 @@ class PirateShip(Action, Attack):
 	def onPlay(self, player, **kwargs):
 		super(PirateShip, self).onPlay(player, **kwargs)
 		if player.user(('attack', 'money'), ''): player.resolveEvent(AddCoin, amnt=len(player.mats['PirateMat']))
-		else: self.attackOpponents(player)
+		else:
+			if True in self.attackOpponents(player): player.resolveEvent(AddToken, to=player.mats['PirateMat'], token=PirateToken())
 	def onPileCreate(self, pile, session, **kwargs):
 		super(PirateShip, self).onPileCreate(pile, session, **kwargs)
 		session.addMat('PirateMat')
 	def attack(self, player, **kwargs):
 		cards = player.resolveEvent(RequestCards, amnt=2)
 		if not cards: return
+		hit = False
 		options = [o for o in cards if 'VICTORY' in o.types]
 		if options:
 			choice = self.owner.user([o.view() for o in options], 'Choose trash')
-			if player.resolveEvent(Trash, frm=player.library, card=cards.pop(cards.index(options[choice]))): self.owner.resolveEvent(AddToken, to=self.owner.mats['PirateMat'], token=PirateToken())
+			if player.resolveEvent(Trash, frm=player.library, card=cards.pop(cards.index(options[choice]))): hit = True
 		for card in cards: player.resolveEvent(Discard, frm=player.library, card=card)
-
+		return hit
+		
 class Salvager(Action):
 	name = 'Salvager'
 	def __init__(self, session, **kwargs):
@@ -1218,15 +1221,15 @@ class Outpost(Action, Duration):
 		player.session.extraTurns.append((self.outpostTurn, {'player': player}))
 	def outpostTurn(self, **kwargs):
 		turns = 0
-		for i in range(len(self.owner.session.events)-1, -1, -1):
-			if self.owner.session.events[0]=='startTurn':
-				if self.owner.session.event[1]['player']==self: turns+=1
+		for i in range(len(self.session.events)-1, -1, -1):
+			if self.session.events[0]=='startTurn':
+				if self.session.event[1]['player']==self: turns+=1
 				else: break
 		if turns>1: return
-		self.owner.session.activePlayer = self.owner
-		self.owner.session.turnFlag = 'outpost'
+		self.session.activePlayer = kwargs['player']
+		self.session.turnFlag = 'outpost'
 		kwargs['player'].resetValues()
-		self.owner.session.dp.send(signal='startTurn', player=self.owner, flags=self.owner.session.turnFlag)
+		self.session.dp.send(signal='startTurn', player=kwargs['player'], flags=self.session.turnFlag)
 		kwargs['player'].session.resolveTriggerQueue()
 		kwargs['player'].actionPhase()
 		kwargs['player'].treasurePhase()
@@ -1301,7 +1304,7 @@ class Fortress(Action):
 	def resolveTrash(self, event, **kwargs):
 		trashedCard = event.spawnClone().resolve()
 		card =  event.player.resolveEvent(MoveCard, frm=self.session.trash, to=event.player.hand, card=self.card)
-		if card: card.setOwner(event.player)
+		if card: player.resolveEvent(GainOwnership, card=card)
 		return trashedCard
 	
 class Procession(Action):
@@ -1627,7 +1630,7 @@ class Teacher(Action, Reserve):
 				if 'BOONTOKEN' in pileToken.types and pileToken.playerOwner==self.owner:
 					hasBoon = True
 					break
-			if not hasBoon and 'ACTION' in self.session.piles[pile].viewTop().types: options.append(pile)
+			if not hasBoon and 'ACTION' in self.session.piles[pile].maskot.types: options.append(pile)
 		if not options: return
 		pile = options[self.owner.user(options, 'Choose pile')]
 		if token.owner: self.owner.resolveEvent(MoveToken, frm=token.owner.tokens, to=self.session.piles[pile], token=token)
@@ -1728,14 +1731,15 @@ class Villa(Action):
 	def conditionGain(self, **kwargs):
 		return self.owner and kwargs['card']==self.card
 	def resolveGain(self, **kwargs):
-		self.owner.resolveEvent(AddAction)
-		self.owner.resolveEvent(MoveCard, frm=self.owner.discardPile, to=self.owner.hand, card=self.card)
+		player = self.owner
+		player.resolveEvent(AddAction)
+		player.resolveEvent(MoveCard, frm=player.discardPile, to=player.hand, card=self.card)
 		for i in range(len(self.session.events)-1, -1, -1):
 			if self.session.events[i][0]=='actionPhase' or self.session.events[i][0]=='treasurePhase': break
-			elif self.session.events[i][0]=='buyPhase' and self.session.events[i][1]['player']==self.owner:
-				self.owner.actionPhase()
-				self.owner.treasurePhase()
-				self.owner.buyPhase()
+			elif self.session.events[i][0]=='buyPhase' and self.session.events[i][1]['player']==player:
+				player.actionPhase()
+				player.treasurePhase()
+				player.buyPhase()
 				break
 		
 class Gladiator(Action):
