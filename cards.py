@@ -211,7 +211,7 @@ class Militia(Action, Attack):
 		self.attackOpponents(player)
 	def attack(self, player, **kwargs):
 		while len(player.hand)>3:
-			choice = player.selectCard(message='Choose discard')
+			card = player.selectCard(message='Choose discard')
 			player.resolveEvent(Discard, card=card)
 
 class Moneylender(Action):
@@ -1858,7 +1858,7 @@ class Catapult(Action, Attack):
 	def attack(self, player, **kwargs):
 		if kwargs['militia']:
 			while len(player.hand)>3:
-				choice = player.selectCard(message='Choose discard')
+				card = player.selectCard(message='Choose discard')
 				player.resolveEvent(Discard, card=card)
 		if kwargs['curse']: player.resolveEvent(GainFromPile, frm=self.session.piles['Curse'])
 		
