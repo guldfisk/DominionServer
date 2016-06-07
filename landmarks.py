@@ -18,7 +18,7 @@ class Battlefield(Landmark):
 class Fountain(Landmark):
 	name = 'Fountain'
 	def onGameEnd(self, player, **kwargs):
-		if [o.name for o in player.owns].count('Copper')>=10: player.resolveEvent(AddVictory, amnt=15)
+		if [o.name for o in player.owns].count('Copper')>=10: return 15
 	
 class Keep(Landmark):
 	name = 'Keep'
@@ -27,7 +27,7 @@ class Keep(Landmark):
 		for aplayer in self.session.getOtherPlayers(player):
 			for treasure in copy.copy(treasures):
 				if [o.name for o in aplayer.owns].count(treasure)>[o.name for o in player.owns].count(treasure): treasures.remove(treasure)
-		player.resolveEvent(AddVictory, amnt=5*len(treasures))
+		return 5*len(treasures)
 
 class Tomb(Landmark):
 	name = 'Tomb'
@@ -42,7 +42,6 @@ class WolfDen(Landmark):
 	def onGameEnd(self, player, **kwargs):
 		cards = [o.name for o in player.owns]
 		uniques = set(cards)
-		for card in uniques:
-			if cards.count(card)==1: player.resolveEvent(AddVictory, amnt=-3)
+		return len([o for o in uniques if cards.count(o)==1])*-3
 
 empiresLandmarks = [Battlefield, Fountain, Keep, Tomb, WolfDen]

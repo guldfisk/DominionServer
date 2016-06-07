@@ -140,9 +140,9 @@ class Game(EventSession):
 	def endGame(self):
 		self.dp.send(signal='sessionEnding')
 		for player in self.players: player.endGame()
-		self.players.sort(key=lambda x: x.victories, reverse=True)
+		self.players.sort(key=lambda x: x.vp, reverse=True)
 		points = {}
-		for player in self.players: points[player.name] = player.victories
+		for player in self.players: points[player.name] = player.vp
 		winners=[item for item in self.players if not item in self.conceded]
 		if not winners: winner = self.players[0]
 		else: winner = winners[0]
@@ -235,6 +235,7 @@ class Player(object):
 		self.actions = 0
 		self.buys = 0
 		self.victories = 0
+		self.vp = 0
 		self.debt = 0
 		self.hand = CPile(name='hand', owner=self, private=True)
 		self.library = CPile(name='library', owner=self, faceup=False, ordered=True)
@@ -271,7 +272,8 @@ class Player(object):
 			for key in sorted(self.session.eventSupply): ud+=key+' '+str(self.session.eventSupply[key].coinPrice.access())+'$, '
 			return ud
 	def getStatView(self):
-		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+', VP: '+str(self.victories)+', Journey: '+str(self.journey)+'\n$: '+str(self.coins)+', Buys: '+str(self.buys)+', P: '+str(self.potions)+', D: '+str(self.debt)+'\n-Coin: '+str(self.minusCoin)+'\t-Draw: '+str(self.minusDraw)
+		self.calcVP()
+		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+', VPT: '+str(self.victories)+', VP: '+str(self.vp)+', Journey: '+str(self.journey)+'\n$: '+str(self.coins)+', Buys: '+str(self.buys)+', P: '+str(self.potions)+', D: '+str(self.debt)+'\n-Coin: '+str(self.minusCoin)+'\t-Draw: '+str(self.minusDraw)
 	def getOpponentView(self, player, **kwargs):
 		return self.inPlay.getView(), self.getStatView(), self.discardPile.getView(), self.matsView(player)
 	def updateUI(self):
@@ -388,11 +390,15 @@ class Player(object):
 		self.session.resolveTriggerQueue()
 		self.resetValues()
 		self.session.dp.send(signal='turnEnded', player=self)
+	def calcVP(self, **kwargs):
+		#print(self.owns, [o.onGameEnd(self) for o in self.owns])
+		cards = np.sum([o for o in [o.onGameEnd(self) for o in self.owns] if o])
+		lands = np.sum([o for o in [self.session.landmarks[key].onGameEnd(self) for key in self.session.landmarks] if o])
+		self.vp = self.victories+cards+lands
 	def endGame(self, **kwargs):
 		self.discardHand()
 		self.destroyAll()
-		for card in self.owns: card.onGameEnd(self)
-		for key in self.session.landmarks: self.session.landmarks[key].onGameEnd(self)
+		self.calcVP()
 		#for key in self.mats:
 		#	for i in range(len(self.mats[key])-1, -1, -1):
 		#		if isinstance(self.mats[key][i], Card): self.library.append(self.mats[key].pop(i))
@@ -671,7 +677,7 @@ class Victory(BaseCard):
 		self.victoryValue = self.PA('victoryValue', 0)
 		self.types.add('VICTORY')
 	def onGameEnd(self, player, **kwargs):
-		player.resolveEvent(AddVictory, amnt=self.victoryValue.access())
+		return self.victoryValue.access()
 	def onPileCreate(self, pile, session, **kwargs):
 		if len(session.players)>2: amnt = 12
 		else: amnt = 8
@@ -688,7 +694,7 @@ class Cursed(BaseCard):
 		self.victoryValue = self.PA('victoryValue', -1)
 		self.types.add('CURSED')
 	def onGameEnd(self, player, **kwargs):
-		player.resolveEvent(AddVidtory, amnt=self.victoryValue.access())
+		return self.victoryValue.access()
 		
 class Reaction(object):
 	def __init__(self, session, **kwargs):

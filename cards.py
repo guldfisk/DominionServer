@@ -197,7 +197,7 @@ class Gardens(Victory):
 		super(Gardens, self).__init__(session, **kwargs)
 		self.coinPrice.set(4)
 	def onGameEnd(self, player, **kwargs):
-		player.resolveEvent(AddVictory, amnt=m.floor(len(player.owns)/10))
+		return m.floor(len(player.owns)/10)
 		
 class Militia(Action, Attack):
 	name = 'Militia'
