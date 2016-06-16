@@ -7,6 +7,7 @@ import pickle
 import threading
 import struct
 import socket
+import json
 
 class probMap(list):
 	def get(self, val):
@@ -33,15 +34,26 @@ class PPlayer(Player):
 		self.oplayer = None
 		self.useLock = threading.Semaphore()
 		self.useLock.acquire()
-		self.user = self.use
+		self.user = self.juse
 		self.payload = None
 		self.answer = None
 		self.userAddress = None
-	def use(self, options, name='noName'):
+	def oldUse(self, options, name='noName'):
+		print(self.jsonUI())
 		for player in self.game.players: player.updateUI()
 		if len(options)==1 or not self.game.running: return 0
 		self.payload = pickle.dumps((name, options))
 		self.oplayer.sendPayload('ques', self.payload)
+		self.useLock.acquire()
+		self.payload = None
+		if type(self.answer)==int and self.answer in range(len(options)): return self.answer
+		else: return len(options)-1
+	def juse(self, options, name='noName'):
+		print(self.jsonUI())
+		for player in self.game.players: player.oplayer.sendJson('UPDT', player.jsonUI())
+		if len(options)==1 or not self.game.running: return 0
+		self.payload = {'name': name, 'options': options}
+		self.oplayer.sendJson('QUES', self.payload)
 		self.useLock.acquire()
 		self.payload = None
 		if type(self.answer)==int and self.answer in range(len(options)): return self.answer
@@ -71,15 +83,26 @@ class OnlinePlayer(server.CST):
 		player.oplayer = self
 		player.userAdress = self.addr
 		player.name = self.playerName
-		player.channelOut = self.channelOutFunc
+		player.channelOut = self.jchannelOut
 		player.uiupdate = self.uiupFunc
 	def uiupFunc(self, z, sz, c):
 		sc = c.encode('UTF-8')
 		self.send(('uiup'+z+sz).encode('UTF-8')+struct.pack('I', len(sc))+sc)
+	def jchannelOut(self, name, **kwargs):
+		kwargs.update({'name': name})
+		self.sendJson('NLOG', kwargs)
 	def channelOutFunc(self, l, head='updt', picklel=True):
 		if picklel:	payload = pickle.dumps(l)
 		else: payload = l.encode('UTF-8')
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
+	def sendJson(self, head, content=None):
+		print(content)
+		h = head.encode('UTF-8')
+		assert (len(h)==4), 'Wrong head length'
+		if content: s = json.dumps(content).encode('UTF-8')
+		else: s = ''
+		i = struct.pack('I', len(s))
+		self.send(h+i+s)
 	def sendPayload(self, head, payload):
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
 	def evLogger(self, signal, **kwargs):

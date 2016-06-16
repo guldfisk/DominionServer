@@ -1,0 +1,151 @@
+Alle pakker, både fra og til klienten, består af en fire byte lang UTF-8 encoded header, en fire byte lang unsigned int, der signalere længden af body, og body.
+Ikke alle pakker har en body, hvilket vil sige at længde int'en er 0. Body er altid en UTF-8 encoded json string.
+
+eks
+
+head	len		body
+updt	5		abcde
+
+
+Server til klient
+
+QUES
+{'name': beskednavn, 'options': liste af strings}
+Server forventer at klient vælger en af flere muligheder. Client svarer med index af valg.
+
+UPDT
+En [PILE] består enten af
+{'cards': liste af kort eller tokens}, hvis spilleren kan se listen
+eller
+{'length': mængde af objekter i bunken}, hvis spilleren ikke kan se den
+
+Alle kort er rerpæseneret ved
+{
+	'name': beskrivelse af kort, oftest navn, (Band of Misfits vil hedde "Band of Misfits(Village)" hvis den kopiere en village etc.),
+	'types': liste af kort typer f.eks. ['ACTION'] eller ['VICTORY', TREASURE'],
+	'c': coin price,
+	'p': potion price,
+	'd': debt price
+}
+
+De forskellige kort typer er alle all caps string. Der er:
+ACTION, VICTORY, TREASURE, CURSED (Curse kort er af typen CURSED, ikke CURSE), REACTION, ATTACK, DURATION, RESERVE, TRAVELER, GATHERING
+	
+Alle tokens er repræsenterev ved
+{
+	'name': navn,
+	'owner': potentiel spiller ejer
+}
+	
+Hele json'en der bliver sendt ser sådan ud:
+{
+	'player': {
+		'hand': [PILE],
+		'inPlay': [PILE],
+		'discardPile': [PILE],
+		'values': {
+			'actions': player actions,
+			'vpt': VP tokens,
+			'vp': total VP,
+			'journey': hvorvidt journeytoken er faceup,
+			'coins': coins,
+			'buys': buys,
+			'potions': potions,
+			'debt': debt,
+			'minusCoin': hvorvidt har minuscoin token,
+			'minusDraw': hvorvidt har minusdraw token
+		},
+		'mats': {
+			'mat 1': [PILE],
+			...,
+			'mat n': [PILE]
+		}
+	}
+	'king': {
+		'piles': {
+			'pile 1': {
+				'empty': true hvis der ikke er flere kort i pile,
+				'card': enten det øverste kort i pile, eller pile maskot
+				'tokens': [PILE],
+				'length': antal kort i pile
+			},
+			...,
+			'pile n': {
+				'empty': true hvis der ikke er flere kort i pile,
+				'card': enten det øverste kort i pile, eller pile maskot
+				'tokens': [PILE],
+				'length': antal kort i pile
+			}
+		},
+		'events': {
+			'event 1': {
+				'c': coin price,
+				'p': potion price,
+				'd': debt price,
+				'tokens': tokens
+			 },
+			 ...,
+			 'event n': {
+				'c': coin price,
+				'p': potion price,
+				'd': debt price,
+				'tokens': tokens
+			 }
+		},
+		'landmarks': {
+			'landmark 1': {
+				'tokens': tokens,
+				'points': points
+			},
+			...,
+			'landmark n': {
+				'tokens': tokens,
+				'points': points
+			}
+		},
+		'nonSupplyPiles': {
+			'nspile 1': {
+				'empty': true hvis der ikke er flere kort i pile,
+				'card': enten det øverste kort i pile, eller pile maskot
+				'tokens': [PILE],
+				'length': antal kort i pile
+			},
+			...,
+			'nspile n': {
+				'empty': true hvis der ikke er flere kort i pile,
+				'card': enten det øverste kort i pile, eller pile maskot
+				'tokens': [PILE],
+				'length': antal kort i pile
+			}
+		}
+	},
+	'opponents': liste over modspillere. Disse har alle samme struktur som 'player' sektionen.
+}
+
+NLOG
+Nyt gamelog entry fra server
+{'name': navn, 'key 1': val 1, ..., 'key n', val n}
+
+Mulige keys er
+'card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner', 'flags', 'round'
+
+Mulige navne er
+'Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take', 'TakeMinusDraw', 'TakeMinusCoin', 'FlipJourney', 'treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd'
+	
+Klient til server
+
+ANSW
+{'index': index}
+Bruger foretager valg fra den seneste QUES
+
+NAME
+{'name': name}
+Sætter brugerens brugernavn
+
+RUPD
+Ingen body
+Forespørg ny UPDT
+
+RQUS
+Ingen body
+Forespørg genforsendelse af seneste QUES

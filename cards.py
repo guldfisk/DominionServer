@@ -1990,12 +1990,28 @@ class VP(Token):
 class FarmersMarket(Action, Gathering):
 	name = "Farmer's Market"
 	def __init__(self, session, **kwargs):
-		super(ChariotRace, self).__init__(session, **kwargs)
+		super(FarmersMarket, self).__init__(session, **kwargs)
 		Gathering.__init__(self, session, **kwargs)
 		self.coinPrice.set(3)
 	def onPlay(self, player, **kwargs):
+		super(FarmersMarket, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddBuy)
+		if len([o for o in self.session.piles["Farmer's Market"].tokens if o.name=='VP Token'])>=4:
+			player.resolveEvent(TakeVPs, frm=self.session.piles["Farmer's Market"])
+			player.resolveEvent(Trash, frm=self.owner.inPlay, card=self.card)
+		else:
+			player.resolveEvent(AddToken, to=self.session.piles["Farmer's Market"], token=VP(self.session))
+			player.resolveEvent(AddCoin, amnt=len([o for o in self.session.piles["Farmer's Market"].tokens if o.name=='VP Token']))
+		
+class Encampment(Action):
+	name = 'Encampement'
+	def __init__(self, session, **kwargs):
+		super(Encampement, self).__init__(session, **kwargs)
+		self.coinPrice.set(2)
+	def onPlay(self, player, **kwargs):
 		super(BustlingVillage, self).onPlay(player, **kwargs)
-		player.resolveEvent()
+		player.resolveEvent(AddAction, amnt=2)
+		player.resolveEvent(DrawCards, amnt=2)
 		
 		
-empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress, ChariotRace]
+empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress, ChariotRace, FarmersMarket]

@@ -351,10 +351,9 @@ class MoveToken(Event):
 		
 class AddToken(Event):
 	name = 'AddToken'
-	def setup(self, **kwargs):
+	def payload(self, **kwargs):
 		if hasattr(self.to, 'tokens'): self.to.tokens.append(self.token)
 		else: self.to.append(self.token)
-	def payload(self, **kwargs):
 		self.token.owner = self.to
 		
 class MakeToken(Event):
@@ -366,21 +365,21 @@ class MakeToken(Event):
 class DestroyToken(Event):
 	name = 'DestroyToken'
 	def check(self, **kwargs):
-		if not self.token is self.frm: return True
+		if not self.token in self.frm.tokens: return True
 	def payload(self, **kwargs):
-		self.frm.remove(self.token)
-		return True
+		print('PAYLOAD', self.frm.tokens)
+		self.frm.tokens.remove(self.token)
+		print('LOAD', self.frm)
+		return self.token
 		
 class TakeVPs(Event):
 	name = 'TakeVPs'
 	def payload(self, **kwargs):
 		self.amnt = 0
-		for token in self.frm:
-			if token.name=='VP Token':
-				if self.spawnTree(DestroyToken, token=token).resolve(): self.amnt+=1
+		for token in copy.copy(self.frm.tokens):
+			if token.name=='VP Token' and self.spawnTree(DestroyToken, token=token).resolve(): self.amnt+=1
 		self.spawnTree(AddVictory).resolve()
 				
-		
 class ResolveDuration(Event):
 	name = 'ResolveDuration'
 	def payload(self, **kwargs):

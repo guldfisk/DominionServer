@@ -31,6 +31,13 @@ class CPile(list):
 	def getView(self, player=None):
 		if self.canSee(player): return self.getFullView()
 		else: return str(len(self))+' cards'
+	
+	def fullJView(self):
+		return {'cards': [c.jview() for c in self]}
+	def jview(self, player=None):
+		if self.canSee(player): return self.fullJView()
+		else: {'length': len(self)}
+		
 	def index(self, element):
 		if not element in self: return None
 		return super(CPile, self).index(element)
@@ -83,6 +90,14 @@ class Game(EventSession):
 		self.replaceOrder = self.rReplaceOrder
 		self.orderTriggers = self.rOrderTriggers
 		self.endCondition = self.checkGameEnd
+	def jpiles(self):
+		return {key: self.piles[key].jview() for key in self.piles}
+	def jNSPiles(self):
+		return {key: self.NSPiles[key].jview() for key in self.NSPiles}
+	def jdevents(self):
+		return {key: self.eventSupply[key].jview() for key in self.eventSupply}
+	def jlandmarks(self):
+		return {key: self.landmarks[key].jview() for key in self.landmarks}
 	def pilesView(self, player):
 		ud = ''
 		for key in sorted(self.piles): ud += self.piles[key].getView()+', '
@@ -263,6 +278,8 @@ class Player(object):
 		return self.name
 	def resolveEvent(self, event, **kwargs):
 		return self.session.resolveEvent(event, player=self, **kwargs)
+	def jmats(self, player, **kwargs):
+		return {key: self.mats[key].jview(player) for key in self.mats}
 	def matsView(self, player, **kwargs):
 		ud = ''
 		for key in self.mats: ud += key+': '+self.mats[key].getView(player)+'\n'
@@ -278,8 +295,43 @@ class Player(object):
 	def getStatView(self):
 		self.calcVP()
 		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+', VPT: '+str(self.victories)+', VP: '+str(self.vp)+', Journey: '+str(self.journey)+'\n$: '+str(self.coins)+', Buys: '+str(self.buys)+', P: '+str(self.potions)+', D: '+str(self.debt)+'\n-Coin: '+str(self.minusCoin)+'\t-Draw: '+str(self.minusDraw)
+	def jvalues(self, **kwargs):
+		return {
+			'actions': self.actions,
+			'vpt': self.victories,
+			'vp': self.vp,
+			'journey': self.journey,
+			'coins': self.coins,
+			'buys': self.buys,
+			'potions': self.potions,
+			'debt': self.debt,
+			'minusCoin': self.minusCoin,
+			'minusDraw':self.minusDraw
+		}
 	def getOpponentView(self, player, **kwargs):
 		return self.inPlay.getView(), self.getStatView(), self.discardPile.getView(), self.matsView(player)
+	def jview(self, player):
+		return {
+			'hand': self.hand.jview(player),
+			'inPlay': self.inPlay.jview(player),
+			'discardPile': self.discardPile.jview(player),
+			'values': self.jvalues(),
+			'mats': self.jmats(player)
+		}
+	def jsonUI(self):
+		if not self==self.session.activePlayer and self.session.activePlayer: oppoV=self.session.activePlayer.getOpponentView(self)
+		else: oppoV = self.session.getPreviousPlayer(self).getOpponentView(self)
+		return {
+			'player': self.jview(self),
+			'trash': self.session.trash.jview(self),
+			'kingdom':{
+				'piles': self.session.jpiles(),
+				'events': self.session.jdevents(),
+				'landmarks': self.session.jlandmarks(),
+				'nonSupplyPiles': self.session.jNSPiles()
+			},
+			'opponents': {p.name: p.jview(self) for p in self.session.getOtherPlayers(self)}
+		 }
 	def updateUI(self):
 		self.uiupdate('play', 'hand', self.hand.getFullView())
 		self.uiupdate('play', 'play', self.inPlay.getView())
@@ -297,7 +349,7 @@ class Player(object):
 		self.uiupdate('oppo', 'stat', oppoV[1])
 		self.uiupdate('oppo', 'dcar', oppoV[2])
 		self.uiupdate('oppo', 'mats', oppoV[3])
-	def toPlayer(self, signal, **kwargs):
+	def OLDtoPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
 		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take', 'TakeMinusDraw', 'TakeMinusCoin', 'FlipJourney']
 		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd']
@@ -314,7 +366,23 @@ class Player(object):
 			if key in keyWhiteList and not (key in keyBlackList or (hidden and hidden!=self and key in censored) or (key=='card' and 'to' in kwargs and 'frm' in kwargs and not kwargs['to'].canSee(self) and not kwargs['frm'].canSee(self))): s[1][key] = gN(kwargs[key])
 		if signal=='globalSetup': s[1]['you'] = self.name
 		self.channelOut(s)
-		#self.updateUI()0
+	def toPlayer(self, signal, **kwargs):
+		if not self.channelOut: return
+		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take', 'TakeMinusDraw', 'TakeMinusCoin', 'FlipJourney']
+		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd']
+		keyBlackList = ['signal', 'source', 'session', 'hasReplaced', 'hidden', 'censored']
+		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner', 'flags', 'round']
+		if signal in whiteList: s = [signal, {}]
+		elif signal[-6:]=='_begin' and signal[:-6] in eventWhiteList: s = [signal[:-6], {}]
+		else: return
+		hidden = False
+		censored = ['card']
+		if 'hidden' in kwargs: hidden = kwargs['hidden']
+		if 'censored' in kwargs: censored = kwargs['censored']
+		for key in kwargs:
+			if key in keyWhiteList and not (key in keyBlackList or (hidden and hidden!=self and key in censored) or (key=='card' and 'to' in kwargs and 'frm' in kwargs and not kwargs['to'].canSee(self) and not kwargs['frm'].canSee(self))): s[1][key] = gN(kwargs[key])
+		#if signal=='globalSetup': s[1]['you'] = self.name
+		self.channelOut(s[0], **s[1])
 	def getView(self):
 		return 'Hand: '+self.hand.getFullView()+'\nIn Play: '+self.inPlay.getView()+'\nDiscard: '+self.discardPile.getView()+'\nLibrary: '+self.library.getView()+'\nCoins: '+str(self.coins)+'\tActions: '+str(self.actions)+'\tBuys: '+str(self.buys)
 	def setup(self, session, **kwargs):
@@ -335,7 +403,6 @@ class Player(object):
 	def actionPhase(self, **kwargs):
 		self.session.dp.send(signal='actionPhase', player=self)
 		while True:
-			#self.channelOut(self.request('stat'), 'resp', False)
 			self.session.resolveTriggerQueue()
 			if self.actions<1 or not self.hand: break
 			choice = self.user([o.view() for o in self.hand]+['EndActionPhase'], 'Choose action')
@@ -395,20 +462,13 @@ class Player(object):
 		self.resetValues()
 		self.session.dp.send(signal='turnEnded', player=self)
 	def calcVP(self, **kwargs):
-		#print(self.owns, [o.onGameEnd(self) for o in self.owns])
 		cards = np.sum([o for o in [o.onGameEnd(self) for o in self.owns] if o])
 		lands = np.sum([o for o in [self.session.landmarks[key].onGameEnd(self) for key in self.session.landmarks] if o])
-		self.vp = self.victories+cards+lands
+		self.vp = int(self.victories+cards+lands)
 	def endGame(self, **kwargs):
 		self.discardHand()
 		self.destroyAll()
 		self.calcVP()
-		#for key in self.mats:
-		#	for i in range(len(self.mats[key])-1, -1, -1):
-		#		if isinstance(self.mats[key][i], Card): self.library.append(self.mats[key].pop(i))
-		#self.resolveEvent(Reshuffle)
-		#for card in self.library:
-		#	card.onGameEnd(self)
 	def sessionEnd(self, **kwargs):
 		self.session = None
 	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, minimum=0, **kwargs):
@@ -508,6 +568,10 @@ class Token(object):
 		pass
 	def onLeavePile(self, pile, **kwargs):
 		pass
+	def jview(self, **kwargs):
+		if self.playerOwner: n = self.playerOwner.name
+		else: n = None
+		return {'name': self.name, 'owner': n}
 	def view(self, **kwargs):
 		if self.playerOwner: return self.playerOwner.name+':'+self.name
 		else: return self.name
@@ -539,6 +603,10 @@ class Pile(CPile):
 		ud += ': '+str(len(self))
 		if self.tokens: ud += ' ('+self.tokens.getFullView()+')'
 		return ud
+	def jview(self, **kwargs):
+		top = self.viewTop()
+		if top: return {'empty': False, 'card': top.jview(), 'tokens': self.tokens.jview(), 'length': len(self)}
+		else: return {'empty': True, 'card': self.maskot.jview(), 'tokens': self.tokens.jview(), 'length': len(self)}
 	def getTopView(self):
 		top = self.viewTop()
 		if top: return top.view()
@@ -613,6 +681,12 @@ class BaseCard(WithPAs):
 		while self.connectedConditions: self.session.disconnectCondition(self.connectedConditions.pop())
 	def view(self, **kwargs):
 		return self.name
+	def jviewAdd(self, **kwargs):
+		return {}
+	def jview(self, **kwargs):
+		d = {'name': self.view(), 'types': list(self.types), 'c': self.coinPrice.access(), 'p': self.potionPrice.access(), 'd': self.debtPrice.access()}
+		d.update(self.jviewAdd(**kwargs))
+		return d
 	def connectCondition(self, tp, **kwargs):
 		self.connectedConditions.append(self.session.connectCondition(tp, **kwargs))
 	def costLessThan(self, coins=0, potions=0, debt=0, card=None, **kwargs):
@@ -641,6 +715,7 @@ class DEvent(WithPAs):
 		self.coinPrice = self.PA('coinPrice', kwargs.get('price', 0))
 		self.potionPrice = self.PA('potionPrice', kwargs.get('potionPrice', 0))
 		self.debtPrice = self.PA('potionPrice', kwargs.get('debtPrice', 0))
+		self.tokens = CPile(name='tokens')
 		self.session = session
 		self.owner = None
 	def view(self, **kwargs):
@@ -650,6 +725,8 @@ class DEvent(WithPAs):
 		if potions: ud += str(potions)+'P'
 		if debt: ud += str(debt)+'D'
 		return ud
+	def jview(self, **kwargs):
+		return {'c': self.coinPrice.access(), 'p': self.potionPrice.access(), 'd': self.debtPrice.access(), 'tokens': self.tokens}
 	def getTopView(self, **kwargs):
 		return self.name
 	def onBuy(self, player, **kwargs):
@@ -668,9 +745,12 @@ class Landmark(WithPAs):
 		self.session = session
 		self.tokens = CPile(name='tokens')
 		self.owner = None
+		self.points = None
 	def view(self, **kwargs):
 		if self.tokens: return self.name+'('+self.tokens.getView()+')'
 		else: return self.name
+	def jview(self, **kwargs):
+		return {'tokens': self.tokens.jview(), 'points': self.points}
 	def onGameEnd(self, player, **kwargs):
 		pass
 	
