@@ -38,18 +38,7 @@ class PPlayer(Player):
 		self.payload = None
 		self.answer = None
 		self.userAddress = None
-	def oldUse(self, options, name='noName'):
-		print(self.jsonUI())
-		for player in self.game.players: player.updateUI()
-		if len(options)==1 or not self.game.running: return 0
-		self.payload = pickle.dumps((name, options))
-		self.oplayer.sendPayload('ques', self.payload)
-		self.useLock.acquire()
-		self.payload = None
-		if type(self.answer)==int and self.answer in range(len(options)): return self.answer
-		else: return len(options)-1
 	def juse(self, options, name='noName'):
-		print(self.jsonUI())
 		for player in self.game.players: player.oplayer.sendJson('UPDT', player.jsonUI())
 		if len(options)==1 or not self.game.running: return 0
 		self.payload = {'name': name, 'options': options}
@@ -96,7 +85,6 @@ class OnlinePlayer(server.CST):
 		else: payload = l.encode('UTF-8')
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
 	def sendJson(self, head, content=None):
-		print(content)
 		h = head.encode('UTF-8')
 		assert (len(h)==4), 'Wrong head length'
 		if content: s = json.dumps(content).encode('UTF-8')
@@ -141,34 +129,35 @@ class OnlinePlayer(server.CST):
 		game.makeStartDeck()
 		gT = traa(game.start)
 		gT.start()
-	def command(self, ind):
-		print(ind)
-		if not len(ind)==4: return
-		try: streng = ind.decode('UTF-8')
-		except: streng = None
-		if streng=='game':
-			self.makeGame()
-		elif streng=='test':
-			self.makeGame(True)
-		elif streng=='debu':
-			self.makeGame(True, True)
-		elif streng=='requ':
-			self.channelOutFunc(self.request(self.recvLen(4).decode('UTF-8')), 'resp', False)
-		elif streng=='reco':
+	def recvPack(self):
+		head = self.recvLen().decode('UTF-8')
+		l = struct.unpack('I', self.recvLen())[0]
+		if l: body = json.loads(self.recvLen(l).decode('UTF-8'))
+		else: body = {}
+		return head, body
+	def run(self):
+		while self.running:
+			head, body = self.recvPack()
+			if head==b'':
+				print('recived empty string')
+				self.kill()
+				break
+			self.command(head, body)
+	def command(self, head, body):
+		if head=='GAME': self.makeGame()
+		elif head=='TEST': self.makeGame(True)
+		elif head=='DEBU': self.makeGame(True, True)
+		elif head=='RECO':
 			print(self.oaddr, playerConnections)
 			if not self.oaddr in list(playerConnections): return
 			self.linkPlayer(playerConnections[self.oaddr])
-			if self.player.payload: self.sendPayload('ques', self.player.payload)
-		elif streng=='conc':
-			self.player.game.concede(self.player)
-		elif streng=='name':
-			l = self.recvLen()
-			ll = struct.unpack('I', l)[0]
-			n = self.recvLen(ll)
-			nn = n.decode('UTF-8')
-			self.playerName = nn
-		elif self.player: 
-			self.player.answerF(struct.unpack('I', ind)[0])
+			if self.player.payload: self.sendJson('QUES', self.player.payload)
+		elif head=='CONC': self.player.game.concede(self.player)
+		elif head=='NAME' and 'name' in body: self.playerName = body['name']
+		elif head=='ANSW' and self.player: self.player.answerF(body['index'])
+		elif head=='RUPD' and self.player: self.sendJson('UPDT', self.player.jsonUI())
+		elif head=='RQUE' and self.player: self.sendJson('QUES', self.player.payload)
+		#elif self.player: self.player.answerF(struct.unpack('I', ind)[0]) #WOW
 	def use(self, options, name='noName'):
 		payload = pickle.dumps((name, options))
 		self.send('ques'.encode('UTF-8')+struct.pack('I', len(payload))+payload)

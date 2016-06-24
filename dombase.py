@@ -280,22 +280,8 @@ class Player(object):
 		return self.session.resolveEvent(event, player=self, **kwargs)
 	def jmats(self, player, **kwargs):
 		return {key: self.mats[key].jview(player) for key in self.mats}
-	def matsView(self, player, **kwargs):
-		ud = ''
-		for key in self.mats: ud += key+': '+self.mats[key].getView(player)+'\n'
-		return ud
-	def request(self, head):
-		if head=='stat': return 'Actions: '+str(self.actions)+'\tCoins: '+str(self.coins)+'\tBuys: '+str(self.buys)
-		elif head=='king':
-			ud = ''
-			for key in sorted(self.session.piles): ud+=key+' '+str(self.session.piles[key].maskot.coinPrice.access())+'$: '+str(len(self.session.piles[key]))+', '
-			ud += '\n'
-			for key in sorted(self.session.eventSupply): ud+=key+' '+str(self.session.eventSupply[key].coinPrice.access())+'$, '
-			return ud
-	def getStatView(self):
-		self.calcVP()
-		return 'Library: '+self.library.getView()+'\tHand: '+str(len(self.hand))+'\nActions: '+str(self.actions)+', VPT: '+str(self.victories)+', VP: '+str(self.vp)+', Journey: '+str(self.journey)+'\n$: '+str(self.coins)+', Buys: '+str(self.buys)+', P: '+str(self.potions)+', D: '+str(self.debt)+'\n-Coin: '+str(self.minusCoin)+'\t-Draw: '+str(self.minusDraw)
 	def jvalues(self, **kwargs):
+		self.calcVP()
 		return {
 			'actions': self.actions,
 			'vpt': self.victories,
@@ -308,8 +294,6 @@ class Player(object):
 			'minusCoin': self.minusCoin,
 			'minusDraw':self.minusDraw
 		}
-	def getOpponentView(self, player, **kwargs):
-		return self.inPlay.getView(), self.getStatView(), self.discardPile.getView(), self.matsView(player)
 	def jview(self, player):
 		return {
 			'hand': self.hand.jview(player),
@@ -319,53 +303,17 @@ class Player(object):
 			'mats': self.jmats(player)
 		}
 	def jsonUI(self):
-		if not self==self.session.activePlayer and self.session.activePlayer: oppoV=self.session.activePlayer.getOpponentView(self)
-		else: oppoV = self.session.getPreviousPlayer(self).getOpponentView(self)
 		return {
 			'player': self.jview(self),
-			'trash': self.session.trash.jview(self),
 			'kingdom':{
 				'piles': self.session.jpiles(),
 				'events': self.session.jdevents(),
 				'landmarks': self.session.jlandmarks(),
-				'nonSupplyPiles': self.session.jNSPiles()
+				'nonSupplyPiles': self.session.jNSPiles(),
+				'trash': self.session.trash.jview(self)
 			},
 			'opponents': {p.name: p.jview(self) for p in self.session.getOtherPlayers(self)}
 		 }
-	def updateUI(self):
-		self.uiupdate('play', 'hand', self.hand.getFullView())
-		self.uiupdate('play', 'play', self.inPlay.getView())
-		self.uiupdate('play', 'dcar', self.discardPile.getView())
-		self.uiupdate('play', 'stat', self.getStatView())
-		self.uiupdate('play', 'mats', self.matsView(self))
-		self.uiupdate('tras', 'nnnn', self.session.trash.getView())
-		self.uiupdate('play', 'stat', self.getStatView())
-		self.uiupdate('king', 'pile', self.session.pilesView(self))
-		self.uiupdate('king', 'even', self.session.eventsView(self)+'\n'+self.session.landmarksView(self))
-		self.uiupdate('king', 'nspi', self.session.NSPilesView(self))
-		if not self==self.session.activePlayer and self.session.activePlayer: oppoV=self.session.activePlayer.getOpponentView(self)
-		else: oppoV = self.session.getPreviousPlayer(self).getOpponentView(self)
-		self.uiupdate('oppo', 'play', oppoV[0])
-		self.uiupdate('oppo', 'stat', oppoV[1])
-		self.uiupdate('oppo', 'dcar', oppoV[2])
-		self.uiupdate('oppo', 'mats', oppoV[3])
-	def OLDtoPlayer(self, signal, **kwargs):
-		if not self.channelOut: return
-		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take', 'TakeMinusDraw', 'TakeMinusCoin', 'FlipJourney']
-		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd']
-		keyBlackList = ['signal', 'source', 'session', 'hasReplaced', 'hidden', 'censored']
-		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner', 'flags', 'round']
-		if signal in whiteList: s = [signal, {}]
-		elif signal[-6:]=='_begin' and signal[:-6] in eventWhiteList: s = [signal[:-6], {}]
-		else: return
-		hidden = False
-		censored = ['card']
-		if 'hidden' in kwargs: hidden = kwargs['hidden']
-		if 'censored' in kwargs: censored = kwargs['censored']
-		for key in kwargs:
-			if key in keyWhiteList and not (key in keyBlackList or (hidden and hidden!=self and key in censored) or (key=='card' and 'to' in kwargs and 'frm' in kwargs and not kwargs['to'].canSee(self) and not kwargs['frm'].canSee(self))): s[1][key] = gN(kwargs[key])
-		if signal=='globalSetup': s[1]['you'] = self.name
-		self.channelOut(s)
 	def toPlayer(self, signal, **kwargs):
 		if not self.channelOut: return
 		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take', 'TakeMinusDraw', 'TakeMinusCoin', 'FlipJourney']
@@ -383,8 +331,6 @@ class Player(object):
 			if key in keyWhiteList and not (key in keyBlackList or (hidden and hidden!=self and key in censored) or (key=='card' and 'to' in kwargs and 'frm' in kwargs and not kwargs['to'].canSee(self) and not kwargs['frm'].canSee(self))): s[1][key] = gN(kwargs[key])
 		#if signal=='globalSetup': s[1]['you'] = self.name
 		self.channelOut(s[0], **s[1])
-	def getView(self):
-		return 'Hand: '+self.hand.getFullView()+'\nIn Play: '+self.inPlay.getView()+'\nDiscard: '+self.discardPile.getView()+'\nLibrary: '+self.library.getView()+'\nCoins: '+str(self.coins)+'\tActions: '+str(self.actions)+'\tBuys: '+str(self.buys)
 	def setup(self, session, **kwargs):
 		session.dp.send(signal='setup', player=self)
 		self.session = session
@@ -726,7 +672,7 @@ class DEvent(WithPAs):
 		if debt: ud += str(debt)+'D'
 		return ud
 	def jview(self, **kwargs):
-		return {'c': self.coinPrice.access(), 'p': self.potionPrice.access(), 'd': self.debtPrice.access(), 'tokens': self.tokens}
+		return {'c': self.coinPrice.access(), 'p': self.potionPrice.access(), 'd': self.debtPrice.access(), 'tokens': self.tokens.jview()}
 	def getTopView(self, **kwargs):
 		return self.name
 	def onBuy(self, player, **kwargs):

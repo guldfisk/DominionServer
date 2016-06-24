@@ -117,7 +117,8 @@ Hele json'en der bliver sendt ser sådan ud:
 				'tokens': [PILE],
 				'length': antal kort i pile
 			}
-		}
+		},
+		'trash': [PILE]
 	},
 	'opponents': liste over modspillere. Disse har alle samme struktur som 'player' sektionen.
 }

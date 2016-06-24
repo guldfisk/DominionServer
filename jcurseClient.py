@@ -119,9 +119,7 @@ class ScrollWithInput(object):
 		
 class NetInput(ScrollWithInput):
 	def setName(self, n):
-		nn = n.encode('UTF-8')
-		nl = struct.pack('I', len(nn))
-		s.send('name'.encode('UTF-8')+nl+nn)
+		sendPack(s, 'NAME', {'name': n})
 	def command(self, string):
 		#log('COMMAND', string, string=='conn')
 		if re.match('host ?.+', string, re.IGNORECASE):
@@ -141,13 +139,14 @@ class NetInput(ScrollWithInput):
 		#	s.send(string.encode('UTF-8'))
 		elif re.match('name ?.+', string, re.IGNORECASE):
 			n = re.match('name ?(.+)', string, re.IGNORECASE).groups()[0]
-			if s:
-				self.setName(n)
+			if s: self.setName(n)
 			else:
 				global name
 				name = n
-		elif s: s.send(string.encode('UTF-8'))
-
+		elif s and string=='game': sendPack(s, 'GAME')
+		elif s and string=='rupd': sendPack(s, 'RUPD')
+		elif s and string=='rque': sendPack(s, 'RQUE')
+		
 class GameInput(ScrollWithInput):
 	def command(self, string):
 		ipbuf.add(string)
@@ -193,11 +192,10 @@ def matsts(d):
 def pilests(d):
 	ud = ''
 	for key in sorted(d):
-		ud += key+': '+str(d[key]['length'])+' '+str(d[key]['card']['c'])+'$'
+		ud += d[key]['card']['name']+': '+str(d[key]['length'])+' '+str(d[key]['card']['c'])+'$'
 		if d[key]['card']['p']: ud += str(d[key]['card']['p'])+'P'
 		if d[key]['card']['d']: ud += str(d[key]['card']['d'])+'D'
 		if d[key]['tokens']['cards']:
-			#print('tokens: ', d[key]['tokens'])
 			ud += '('+pts(d[key]['tokens'])+')'
 		ud += ', '
 	return ud
@@ -208,9 +206,19 @@ def eventsts(d):
 		ud += key+' '+str(d[key]['c'])+'$'
 		if d[key]['p']: ud += str(d[key]['p'])+'P'
 		if d[key]['d']: ud += str(d[key]['d'])+'D'
-		if d[key]['tokens']: ud+= '('+pts(d[key]['tokens'])+')'
+		if d[key]['tokens']['cards']: ud+= '('+pts(d[key]['tokens'])+')'
 		ud += ', '
-	return ud	
+	return ud
+
+def landsts(d):
+	ud = ''
+	for key in sorted(d):
+		ud += key
+		if d[key]['points']!=None: ud += ' '+str(d[key]['points'])
+		if d[key]['tokens']['cards']: ud+= '('+pts(d[key]['tokens'])+')'
+		ud += ', '
+	return ud
+	
 class Player(MultiWindow):
 	def __init__(self, nlines, ncols, y, x):
 		super(Player, self).__init__(nlines, ncols, y, x)
@@ -238,7 +246,10 @@ class Kingdom(MultiWindow):
 		})
 	def upd(self, d):
 		if 'piles' in d: self.upw('piles', pilests(d['piles']))
-		if 'events' in d: self.upw('events', eventsts(d['events']))
+		eventlands = ''
+		if 'events' in d: eventlands += eventsts(d['events'])
+		if 'landmarks' in d: eventlands += landsts(d['landmarks'])+'\n'
+		self.upw('events', eventlands)
 		if 'nonSupplyPiles' in d: self.upw('nonSupplyPiles', pilests(d['nonSupplyPiles']))
 		
 class Opponent(MultiWindow):
@@ -288,7 +299,6 @@ def nstart(stdscr):
 	global opponent
 	curses.start_color()
 	maxY, maxX = stdscr.getmaxyx()
-	log(maxY, maxX)
 	logw = GameInput(windowX=math.floor(maxX/2), windowY=math.floor(maxY/3), height=math.floor(maxY*2/3)-2, width=maxX-math.floor(maxX/2)-1, scrollDepth=1000)
 	cw = NetInput(windowX=math.floor(maxX/4), windowY=math.floor(maxY/8*7), height=maxY-math.floor(maxY/8*7)-2, width=math.floor(maxX/4)-1)
 	netstatw = curses.newwin(maxY-math.floor(maxY/8*7), math.floor(maxX/4)-1, math.floor(maxY/8*7), 0)
@@ -296,16 +306,11 @@ def nstart(stdscr):
 	player = Player(math.floor(maxY*7/16), math.floor(maxX/2), 0, 0)
 	kingdom = Kingdom(math.floor(maxY/3), math.floor(maxX/2), 0, math.floor(maxX/2))
 	opponent = Opponent(math.floor(maxY*5/16), math.floor(maxX/2), math.floor(maxY*9/16), 0)
-	#for zone in player.zones: player.setZone(zone, zone)
-	#for zone in kingdom.zones: kingdom.setZone(zone, zone)
-	#for zone in opponent.zones: opponent.setZone(zone, zone)
 	trash.addstr('trash')
 	trash.refresh()
 	if os.path.exists('cccnfg.cfg'):
 		with open('cccnfg.cfg', 'r') as f:
-			for ln in f.read().splitlines():
-				log(ln)
-				cw.command(ln)
+			for ln in f.read().splitlines(): cw.command(ln)
 	while True:
 		cw.run()
 		logw.run()
@@ -335,7 +340,8 @@ def updt(signal, **kwargs):
 	logw.addstr('')
 	
 def answer(**kwargs):
-	s.send(struct.pack('I', testUser(kwargs['options'], kwargs['name'])))
+	sendPack(s, 'ANSW', {'index': testUser(kwargs['options'], kwargs['name'])})
+	#s.send(struct.pack('I', testUser(kwargs['options'], kwargs['name'])))
 	
 def recvLen(s, l=4):
 	bytes = b''
@@ -345,8 +351,17 @@ def recvLen(s, l=4):
 def recvPack(s):
 	head = recvLen(s).decode('UTF-8')
 	l = struct.unpack('I', recvLen(s))[0]
-	body = json.loads(recvLen(s, l).decode('UTF-8'))
+	if l: body = json.loads(recvLen(s, l).decode('UTF-8'))
+	else: body = {}
 	return head, body
+	
+def sendPack(s, head, content=None):
+	h = head.encode('UTF-8')
+	assert (len(h)==4), 'Wrong head length'
+	if content: st = json.dumps(content).encode('UTF-8')
+	else: st = b''
+	i = struct.pack('I', len(st))
+	s.send(h+i+st)
 	
 def lyt(**kwargs):
 	while True:
@@ -358,40 +373,14 @@ def lyt(**kwargs):
 			player.upd(body['player'])
 			kingdom.upd(body['kingdom'])
 			if body['opponents']: opponent.upd(body['opponent'][0])
+			trash.clear()
+			try:
+				trash.addstr(pts(body['kingdom']['trash']))
+			except curses.error: pass
+			trash.refresh()
 		elif head=='NLOG':
 			n = body.pop('name')
 			updt(n, **body)
-	while True:
-		head = recvLen(s).decode('UTF-8')
-		if head=='QUES':
-			try:
-				length = struct.unpack('I', recvLen(s))[0]
-				recieved = recvLen(s, length)
-				if not len(recieved)==length:
-					logw.addstr('lost package')
-					continue
-				upickle = pickle.loads(recieved)
-			except: continue
-			aF = traa(answer, name=upickle[0], options=upickle[1])
-			aF.start()
-		elif head=='updt':
-			try:
-				length = struct.unpack('I', recvLen(s))[0]
-				recieved = recvLen(s, length)
-				if not len(recieved)==length:
-					logw.addstr('lost package')
-					continue
-				l = pickle.loads(recieved)
-			except: continue
-			updt(l[0], **l[1])
-		elif head=='uiup':
-			try:
-				zone = recvLen(s).decode('UTF-8')
-				subzone = recvLen(s).decode('UTF-8')
-				length = struct.unpack('I', recvLen(s))[0]
-				content = recvLen(s, length).decode('UTF-8')
-			except: continue
-			uiup(zone, subzone, content)
 		
 def main():
 	global s
