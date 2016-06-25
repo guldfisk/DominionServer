@@ -366,3 +366,9 @@ class Dominate(DEvent):
 		if player.resolveEvent(GainFromPile, frm=self.session.piles['Province']): player.resolveEvent(AddVictory, amnt=9)
 		
 empiresDEvents = [Triumph, Windfall, Dominate]
+
+deventSets = {
+	'adventuresDEvents': adventuresDEvents,
+	'promoDEvents': promoDEvents,
+	'empiresDEvents': empiresDEvents
+}

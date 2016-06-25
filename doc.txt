@@ -150,3 +150,7 @@ Forespørg ny UPDT
 RQUS
 Ingen body
 Forespørg genforsendelse af seneste QUES
+
+GAME
+{'kingdom': string}
+Starter et spil, kingdom er en string der specificere hvad der er i kingdom.

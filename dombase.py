@@ -5,6 +5,14 @@ import copy
 import types
 from events import *
 
+class probMap(list):
+	def get(self, val):
+		sum = 0
+		for i in range(len(self)):
+			sum += self[i]
+			if val<=sum: return i
+		return len(self)-1
+
 class Log(object):
 	def __init__(self, **kwargs):
 		self.out = open('log.log', 'a')
@@ -246,7 +254,55 @@ class Game(EventSession):
 			while os: ud.append(os.pop(player.user([o[0].source.view() for o in os], 'Choose trigger '+str([o[0].source.view() for o in ud]))))
 		ud.extend(aoptions)
 		return ud
-			
+
+def makeGame(game, base = [], cardm={}, deventm={}, landm={}, king=''):
+	def addCards(*os):
+		for card in os:
+			cards.append(card)
+			if len(cards)>=kingSize: break
+	def addDEvents(*os):
+		for devent in os:
+			devents.append(devent)
+			if len(devents)>=deventSize: break
+	def addLands(*os):
+		for land in os:
+			lands.append(land)
+			if len(lands)>=landSize: break
+	def sample(population, amnt):
+		if amnt>len(population): amnt=len(population)
+		return random.sample(population, amnt)
+	allCards = dictMerge(*[cardm[key] for key in cardm])
+	allDEvents = dictMerge(*[deventm[key] for key in deventm])
+	allLands = dictMerge(*[landm[key] for key in landm])
+	kingSize = 10
+	proM = probMap((0.1, 0.5, 0.4))
+	deventSize = proM.get(random.random())
+	landSize = proM.get(random.random())
+	cards = []
+	devents = []
+	lands = []
+	for c in re.finditer('(\d+)? ?([a-z]+)', king, re.IGNORECASE):
+		amnt, cont = c.groups()
+		if amnt: amnt = int(amnt)
+		if amnt!=None:
+			if cont=='events': deventSize = amnt
+			elif cont=='cards': kingSize = amnt
+			elif cont=='landmarks': landSize = amnt
+			elif cont in cardm: addCards(*sample([allCards[o] for o in cardm[cont] if not allCards[o] in cards], amnt))
+			elif cont in deventm: addDEvents(*sample([allDEvents[o] for o in deventm[cont] if not allDEvents[o] in devents], amnt))
+			elif cont in landm: addLands(*sample([allLands[o] for o in landm[cont] if not allLands[o] in lands], amnt))
+		else:
+			if cont in allCards and not cont in cards: addCards(allCards[cont])
+			elif cont in allDEvents and not cont in devents: addDEvents(allDEvents[cont])
+			if cont in allLands and not cont in lands: addLands(allLands[cont])
+	addCards(*sample([allCards[c] for c in allCards if not allCards[c] in cards], kingSize-len(cards)))
+	addDEvents(*sample([allDEvents[c] for c in allDEvents if not allDEvents[c] in devents], deventSize-len(devents)))
+	addLands(*sample([allLands[c] for c in allLands if not allLands[c] in lands], landSize-len(lands)))
+	game.makePiles(base)
+	game.makeDEvents(devents)
+	game.makeLandmarks(lands)
+	game.makePiles(cards)
+		
 class Player(object):
 	def __init__(self, **kwargs):
 		self.coins = 0

@@ -9,14 +9,6 @@ import struct
 import socket
 import json
 
-class probMap(list):
-	def get(self, val):
-		sum = 0
-		for i in range(len(self)):
-			sum += self[i]
-			if val<=sum: return i
-		return len(self)-1
-
 class traa(threading.Thread):
 	def __init__(self, f, **kwargs):
 		threading.Thread.__init__(self)
@@ -65,8 +57,8 @@ class OnlinePlayer(server.CST):
 		self.defaultRecvLen = 4
 		self.player = None
 		self.indents = []
-		self.deventPM = probMap((0.1, 0.5, 0.4))
-		self.landmarkPM = probMap((0.1, 0.5, 0.4))
+		#self.deventPM = probMap((0.1, 0.5, 0.4))
+		#self.landmarkPM = probMap((0.1, 0.5, 0.4))
 	def linkPlayer(self, player):
 		self.player = player
 		player.oplayer = self
@@ -98,7 +90,7 @@ class OnlinePlayer(server.CST):
 		if signal[-6:]=='_begin': self.indents.append(signal[:-6])
 		elif signal in self.indents: self.indents.remove(signal)
 		print('>'+'|\t'*len(self.indents)+signal+':: '+str(list(kwargs)))
-	def makeGame(self, allCards=False, printEvents=False, **kwargs):
+	def makeGame(self, allCards=False, printEvents=False, kingdom='', **kwargs):
 		players = []
 		for key in server.csts:
 			if server.csts[key].player==None:
@@ -110,21 +102,18 @@ class OnlinePlayer(server.CST):
 		game = Game(players=players)
 		games.append(game)
 		for player in game.players:	player.game = game
-		game.makePiles(baseSetBase)
 		#options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands+empires
 		options = baseSet+seaside+darkages+adventures+alchemy+empires+prosperity
 		allDEvents = adventuresDEvents+promoDEvents+empiresDEvents
 		landmarks = empiresLandmarks
 		if allCards:
+			game.makePiles(baseSetBase)
 			options += testCards
 			game.makePiles(options)
 			game.makeDEvents(allDEvents)
 			game.makeLandmarks(landmarks)
 		else:
-			game.makeDEvents(random.sample(allDEvents, self.deventPM.get(random.random())))
-			game.makeLandmarks(random.sample(landmarks, self.landmarkPM.get(random.random())))
-			piles = random.sample(options, 10)
-			game.makePiles(piles)
+			makeGame(game, baseSetBase, cardSetsD, deventSetsD, landSetsD, kingdom)
 		if printEvents: game.dp.connect(self.evLogger)
 		game.makeStartDeck()
 		gT = traa(game.start)
@@ -144,7 +133,7 @@ class OnlinePlayer(server.CST):
 				break
 			self.command(head, body)
 	def command(self, head, body):
-		if head=='GAME': self.makeGame()
+		if head=='GAME': self.makeGame(kingdom=body['kingdom'])
 		elif head=='TEST': self.makeGame(True)
 		elif head=='DEBU': self.makeGame(True, True)
 		elif head=='RECO':
@@ -157,7 +146,6 @@ class OnlinePlayer(server.CST):
 		elif head=='ANSW' and self.player: self.player.answerF(body['index'])
 		elif head=='RUPD' and self.player: self.sendJson('UPDT', self.player.jsonUI())
 		elif head=='RQUE' and self.player: self.sendJson('QUES', self.player.payload)
-		#elif self.player: self.player.answerF(struct.unpack('I', ind)[0]) #WOW
 	def use(self, options, name='noName'):
 		payload = pickle.dumps((name, options))
 		self.send('ques'.encode('UTF-8')+struct.pack('I', len(payload))+payload)
@@ -177,4 +165,7 @@ if __name__=='__main__':
 	ct = server.clientThread(s, OnlinePlayer)
 	ct.start()
 	print('ct started')
+	cardSetsD = {key: {o.name: o for o in cardSets[key]} for key in cardSets}
+	deventSetsD = {key: {o.name: o for o in deventSets[key]} for key in deventSets}
+	landSetsD = {key: {o.name: o for o in landmarkSets[key]} for key in landmarkSets}
 	

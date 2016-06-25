@@ -45,3 +45,7 @@ class WolfDen(Landmark):
 		return len([o for o in uniques if cards.count(o)==1])*-3
 
 empiresLandmarks = [Battlefield, Fountain, Keep, Tomb, WolfDen]
+
+landmarkSets = {
+	'empiresLandmarks': empiresLandmarks
+}

@@ -143,9 +143,15 @@ class NetInput(ScrollWithInput):
 			else:
 				global name
 				name = n
-		elif s and string=='game': sendPack(s, 'GAME')
+		elif s and re.match('game.*', string, re.IGNORECASE):
+			m = re.match('game(.+)', string, re.IGNORECASE)
+			if m: k = m.groups()[0]
+			else: k = ''
+			sendPack(s, 'GAME', {'kingdom': k})
+		elif s and string=='debu': sendPack(s, 'DEBU')
 		elif s and string=='rupd': sendPack(s, 'RUPD')
 		elif s and string=='rque': sendPack(s, 'RQUE')
+		elif s and string=='reco': sendPack(s, 'RECO')
 		
 class GameInput(ScrollWithInput):
 	def command(self, string):
