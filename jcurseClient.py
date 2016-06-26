@@ -378,7 +378,9 @@ def lyt(**kwargs):
 		elif head=='UPDT':
 			player.upd(body['player'])
 			kingdom.upd(body['kingdom'])
-			if body['opponents']: opponent.upd(body['opponent'][0])
+			if body['opponents']:
+				#print(body['opponents'])
+				opponent.upd(body['opponents'][list(body['opponents'])[0]])
 			trash.clear()
 			try:
 				trash.addstr(pts(body['kingdom']['trash']))
