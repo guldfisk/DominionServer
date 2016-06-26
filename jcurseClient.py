@@ -186,7 +186,8 @@ def pts(pile):
 def statts(d):
 	ud = ''
 	for key in sorted(d):
-		ud += key+': '+str(d[key])+', '
+		if type(d[key])==dict: ud += key+': '+str(d[key]['length'])+', '
+		else: ud += key+': '+str(d[key])+', '
 	return ud
 	
 def matsts(d):

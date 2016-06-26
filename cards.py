@@ -1508,7 +1508,7 @@ class Champion(Action, Duration):
 	def conditionDestroy(self, **kwargs):
 		return kwargs['card']==self.card
 	def conditionAction(self, **kwargs):
-		return self.owner and self.owner==kwargs['player'] and 'ACTION' in kwargs['card'].types and not kwargs['card']==self.card
+		return self.owner and self.owner==kwargs['player'] and 'ACTION' in kwargs['card'].types and self.card in self.owner.inPlay and not kwargs['card']==self.card
 	def resolveAction(self, **kwargs):
 		self.owner.resolveEvent(AddAction)
 	def conditionProtect(self, **kwargs):

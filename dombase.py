@@ -44,8 +44,7 @@ class CPile(list):
 		return {'cards': [c.jview() for c in self]}
 	def jview(self, player=None):
 		if self.canSee(player): return self.fullJView()
-		else: {'length': len(self)}
-		
+		else: return {'length': len(self)}
 	def index(self, element):
 		if not element in self: return None
 		return super(CPile, self).index(element)
@@ -347,6 +346,8 @@ class Player(object):
 			'buys': self.buys,
 			'potions': self.potions,
 			'debt': self.debt,
+			'library': self.library.jview(),
+			'hand': self.hand.jview(),
 			'minusCoin': self.minusCoin,
 			'minusDraw':self.minusDraw
 		}

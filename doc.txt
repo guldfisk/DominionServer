@@ -52,6 +52,8 @@ Hele json'en der bliver sendt ser sådan ud:
 			'buys': buys,
 			'potions': potions,
 			'debt': debt,
+			'library': antal kort i library,
+			'hand': antal kort på hånd,
 			'minusCoin': hvorvidt har minuscoin token,
 			'minusDraw': hvorvidt har minusdraw token
 		},
