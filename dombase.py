@@ -267,8 +267,7 @@ def makeGame(game, base = [], cardm={}, deventm={}, landm={}, king=''):
 			lands.append(land)
 			if len(lands)>=landSize: break
 	def sample(population, amnt):
-		if amnt>len(population): amnt=len(population)
-		return random.sample(population, amnt)
+		return random.sample(population, min(len(population), amnt))
 	allCards = dictMerge(*[cardm[key] for key in cardm])
 	allDEvents = dictMerge(*[deventm[key] for key in deventm])
 	allLands = dictMerge(*[landm[key] for key in landm])
@@ -463,6 +462,7 @@ class Player(object):
 		self.session.resolveTriggerQueue()
 		self.resetValues()
 		self.session.dp.send(signal='turnEnded', player=self)
+		self.session.resolveTriggerQueue()
 	def calcVP(self, **kwargs):
 		cards = np.sum([o for o in [o.onGameEnd(self) for o in self.owns] if o])
 		lands = np.sum([o for o in [self.session.landmarks[key].onGameEnd(self) for key in self.session.landmarks] if o])

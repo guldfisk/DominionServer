@@ -130,7 +130,7 @@ class Ferry(DEvent):
 	def onBuy(self, player, **kwargs):
 		token = player.tokens['Minus Cost']
 		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
-		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
+		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
 class Plan(DEvent):
@@ -142,7 +142,7 @@ class Plan(DEvent):
 	def onBuy(self, player, **kwargs):
 		token = player.tokens['Trashing Token']
 		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
-		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
+		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
 class Mission(DEvent):
@@ -216,7 +216,7 @@ class Seaway(DEvent):
 		token = player.tokens['Plus Buy Token']
 		pile = player.getPile(restriction=lambda o: 'ACTION' in o.types)
 		player.resolveEvent(GainFromPile, frm=pile)
-		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
+		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
 class Trade(DEvent):
@@ -238,7 +238,7 @@ class LostArts(DEvent):
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Action Token']
 		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
-		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
+		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
 class Training(DEvent):
@@ -250,7 +250,7 @@ class Training(DEvent):
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Coin Token']
 		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
-		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
+		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
 def viewEstate(self, **kwargs):
@@ -310,7 +310,7 @@ class Pathfinding(DEvent):
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Card Token']
 		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
-		if token.owner: player.resolveEvent(MoveToken, frm=token.owner.tokens, to=pile, token=token)
+		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 	
 adventuresDEvents = [Alms, Borrow, Quest, Save, ScoutingParty, TravelingFair, Bonfire, Expedition, Ferry, Plan, Mission, Pilgrimage, Ball, Raid, Seaway, Trade, LostArts, Training, Inheritance, Pathfinding]
@@ -365,7 +365,136 @@ class Dominate(DEvent):
 	def onBuy(self, player, **kwargs):		
 		if player.resolveEvent(GainFromPile, frm=self.session.piles['Province']): player.resolveEvent(AddVictory, amnt=9)
 		
-empiresDEvents = [Triumph, Windfall, Dominate]
+class Annex(DEvent):
+	name = 'Annex'
+	def __init__(self, session, **kwargs):
+		super(Annex, self).__init__(session, **kwargs)
+		self.debtPrice.set(8)
+	def onBuy(self, player, **kwargs):		
+		cards = player.selectCards(frm=player.discardPile, message='Choose not shuffle', amnt=5, optional=True)
+		for card in copy.copy(player.discardPile):
+			if not card in cards: player.resolveEvent(MoveCard, frm=player.discardPile, to=player.library, card=card)
+		player.resolveEvent(Shuffle)
+		player.resolveEvent(GainFromPile, frm=self.session.piles['Duchy'])
+
+class Donate(DEvent):
+	name = 'Donate'
+	class DonateTrigger(DelayedTrigger):
+		name = 'DonateTrigger'
+		defaultTrigger = 'turnEnded'
+		def resolve(self, **kwargs):
+			for card in copy.copy(self.player.library): self.player.resolveEvent(MoveCard, frm=self.player.library, to=self.player.hand, card=card)
+			for card in copy.copy(self.player.discardPile): self.player.resolveEvent(MoveCard, frm=self.player.discardPile, to=self.player.hand, card=card)
+			cards = self.player.selectCards(optional=True, message='Choose trash')
+			for card in cards: self.player.resolveEvent(Trash, frm=self.player.hand, card=card)
+			for card in copy.copy(self.player.hand): self.player.resolveEvent(MoveCard, frm=self.player.hand, to=self.player.library, card=card)
+			self.player.resolveEvent(Shuffle)
+			self.player.resolveEvent(DrawCards, amnt=5)
+	def __init__(self, session, **kwargs):
+		super(Donate, self).__init__(session, **kwargs)
+		self.debtPrice.set(8)
+	def onBuy(self, player, **kwargs):		
+		self.session.connectCondition(self.DonateTrigger, source=self, player=player)
+
+class Advance(DEvent):
+	name = 'Advance'
+	def __init__(self, session, **kwargs):
+		super(Advance, self).__init__(session, **kwargs)
+		self.coinPrice.set(0)
+	def onBuy(self, player, **kwargs):
+		card = player.selectCard(optional=True, message='Choose trash', restriction=lambda o: 'ACTION' in o.types)
+		if card: player.gainCostingLessThan(7, restriction=lambda o: 'ACTION' in o.types)
+		
+class Delve(DEvent):
+	name = 'Delve'
+	def __init__(self, session, **kwargs):
+		super(Delve, self).__init__(session, **kwargs)
+		self.coinPrice.set(2)
+	def onBuy(self, player, **kwargs):
+		player.resolveEvent(GainFromPile, frm=self.session.piles['Silver'])
+		player.resolveEvent(AddBuy)
+		
+class DebtToken(Token):
+	name = 'Debt Token'
+	def __init__(self, session, **kwargs):
+		super(DebtToken, self).__init__(session, **kwargs)
+		self.session.connectCondition(DelayedTrigger, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def conditionGain(self, **kwargs):
+		return kwargs['frm']==self.owner
+	def resolveGain(self, **kwargs):
+		kwargs['player'].resolveEvent(AddDebt)
+		kwargs['player'].resolveEvent(DestroyToken, frm=self.owner, token=self)
+	
+class Tax(DEvent):
+	name = 'Tax'
+	class TaxSetup(DelayedTrigger):
+		name = 'TaxSetup'
+		defaultTrigger = 'globalSetup'
+		def resolve(self, **kwargs):
+			for pile in self.source.session.piles: self.source.session.resolveEvent(AddToken, to=self.source.session.piles[pile], token=DebtToken(self.source.session))
+	def __init__(self, session, **kwargs):
+		super(Tax, self).__init__(session, **kwargs)
+		self.coinPrice.set(2)
+		session.connectCondition(self.TaxSetup, source=self)
+	def onBuy(self, player, **kwargs):
+		pile = player.selectPile()
+		for i in range(2): self.session.resolveEvent(AddToken, to=pile, token=DebtToken(self.session))
+	
+class Banquet(DEvent):
+	name = 'Banquet'
+	def __init__(self, session, **kwargs):
+		super(Banquet, self).__init__(session, **kwargs)
+		self.coinPrice.set(3)
+	def onBuy(self, player, **kwargs):
+		player.gainCostingLessThan(6, restrictio=lambda o: 'VICTORY' not in o.types)
+		for i in range(2): player.resolveEvent(GainFromPile, frm=self.session.piles['Copper'])
+		
+class Ritual(DEvent):
+	name = 'Ritual'
+	def __init__(self, session, **kwargs):
+		super(Ritual, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+	def onBuy(self, player, **kwargs):
+		if not player.resolveEvent(GainFromPile, frm=self.session.piles['Curse']): return
+		card = player.selectCard()
+		player.resolveEvent(AddVictory, amnt=player.coinPrice.access())
+		player.resolveEvent(Trash, frm=player.hand, card=card)
+		
+class SaltTheEarth(DEvent):
+	name = 'Salt The Earth'
+	def __init__(self, session, **kwargs):
+		super(SaltTheEarth, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+	def onBuy(self, player, **kwargs):
+		player.resolveEvent(AddVictory)
+		pile = player.selectPile(restriction=lambda o: 'VICTORY' in o.types)
+		card = pile.viewTop()
+		if card: player.resolveEvent(Trash, frm=pile, card=card)
+
+class Wedding(DEvent):
+	name = 'Wedding'
+	def __init__(self, session, **kwargs):
+		super(Wedding, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+		self.debtPrice.set(3)
+	def onBuy(self, player, **kwargs):
+		player.resolveEvent(AddVictory)
+		player.resolveEvent(GainFromPile, frm=self.session.piles['Gold'])
+
+class Conquest(DEvent):
+	name = 'Conquest'
+	def __init__(self, session, **kwargs):
+		super(Wedding, self).__init__(session, **kwargs)
+		self.coinPrice.set(6)
+	def onBuy(self, player, **kwargs):
+		for i in range(2): player.resolveEvent(GainFromPile, frm=self.session.piles['Silver'])
+		silvers = 0
+		for i in range(len(self.session.events)-1, -1, -1):
+			if self.session.events[i][0]=='Gain' and self.session.events[i][1]['card'].name=='Silver' and self.session.events[i][1]['player']==player: silvers += 1
+			elif self.session.events[i][0]=='startTurn': break
+		player.resolveEvent(AddVictory, amnt=silvers)
+		
+empiresDEvents = [Triumph, Windfall, Dominate, Annex, Donate, Advance, Delve, Tax, Banquet, Ritual, SaltTheEarth, Wedding, Conquest]
 
 deventSets = {
 	'adventuresDEvents': adventuresDEvents,

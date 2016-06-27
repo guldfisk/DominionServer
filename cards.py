@@ -463,7 +463,7 @@ class TradeToken(Token):
 	def conditionGain(self, **kwargs):
 		return kwargs['frm']==self.owner
 	def resolveGain(self, **kwargs):
-		kwargs['player'].resolveEvent(MoveToken, frm=self.owner.tokens, to=self.session.globalMats['TradeRouteMat'], token=self)
+		kwargs['player'].resolveEvent(MoveToken, frm=self.owner, to=self.session.globalMats['TradeRouteMat'], token=self)
 		
 class TradeRoute(Action):
 	name = 'Trade Route'
@@ -1631,7 +1631,7 @@ class Teacher(Action, Reserve):
 			if not hasBoon and 'ACTION' in self.session.piles[pile].maskot.types: options.append(pile)
 		if not options: return
 		pile = options[self.owner.user(options, 'Choose pile')]
-		if token.owner: self.owner.resolveEvent(MoveToken, frm=token.owner.tokens, to=self.session.piles[pile], token=token)
+		if token.owner: self.owner.resolveEvent(MoveToken, frm=token.owner, to=self.session.piles[pile], token=token)
 		else: self.owner.resolveEvent(AddToken, to=self.session.piles[pile], token=token)
 	def onPileCreate(self, pile, session, **kwargs):
 		Reserve.onPileCreate(self, pile, session, **kwargs)
@@ -2329,30 +2329,80 @@ class Archive(Action, Duration):
 	def onPileCreate(self, pile, session, **kwargs):
 		super(Archive, self).onPileCreate(pile, session, **kwargs)
 		session.addMat('ArchiveMat', private=True)
-
-"""		
+		
 class Charm(Treasure):
 	name = 'Charm'
-	class EnchantressAttack(DelayedTrigger):
-		name = 'EnchantressAttack'
+	class CharmTrigger(DelayedTrigger):
+		name = 'CharmTrigger'
 		defaultTrigger = 'Buy'
+		defaultTerminatorTrigger = 'turnEnded'
 		def condition(self, **kwargs):
-			return 'ACTION' in kwargs['card'].types and kwargs['player']==self.attacking
-		def resolve(self, event, **kwargs):
-			event.spawn(AddAction, amnt=1).resolve()
-			event.spawn(Draw).resolve()
+			return kwargs['player']==self.source
+		def resolve(self, **kwargs):
+			pile = kwargs['player'].pileCosting(card=kwargs['card'], optional=True, restriction=lambda o: o.name!=kwargs['card'].name)
+			if not pile: return
+			kwargs['player'].resolveEvent(GainFromPile, frm=pile)
 		def terminateCondition(self, **kwargs):
-			return kwargs['player']==self.attacking
+			return kwargs['player']==self.source
 	def __init__(self, session, **kwargs):
 		super(Charm, self).__init__(session, **kwargs)
 		self.coinPrice.set(5)
 	def onPlay(self, player, **kwargs):
 		super(Charm, self).onPlay(player, **kwargs)
-		Duration.onPlay(self, player, **kwargs)
-		self.attackOpponents(player)
-"""
+		if player.user(('Duplicate', 'Coin & buy'), 'Choose mode'):
+			player.resolveEvent(AddCoin, amnt=2)
+			player.resolveEvent(AddBuy)
+		else: self.session.connectCondition(self.CharmTrigger, source=self)
+
+class Forum(Action):
+	name = 'Forum'
+	def __init__(self, session, **kwargs):
+		super(Forum, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+		self.connectCondition(Trigger, trigger='Buy', source=self, resolve=self.resolveBuy, condition=self.conditionBuy)
+	def onPlay(self, player, **kwargs):
+		super(Forum, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddAction)
+		player.resolveEvent(DrawCards, amnt=3)
+		for card in player.selectCards(2): player.resolveEvent(Discard, card=card)
+	def conditionBuy(self, **kwargs):
+		return kwargs['card']==self.card
+	def resolveBuy(self, **kwargs):
+		kwargs['player'].resolveEvent(AddBuy)
 		
-empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress, ChariotRace, FarmersMarket, EncampmentPlunder, Engineer, Overlord, PatricianEmporium, Castles, Sacrifice, Temple, Archive]
+class Legionary(Action, Attack):
+	name = 'Legionary'
+	def __init__(self, session, **kwargs):
+		super(Legionary, self).__init__(session, **kwargs)
+		Attack.__init__(self, session, **kwargs)
+		self.coinPrice.set(5)
+	def onPlay(self, player, **kwargs):
+		super(Legionary, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddCoin, amnt=2)
+		card = player.selectCard(optional=True, message='Choose reveal', restriction=lambda o: o.name=='Gold')
+		if card: self.attackOpponents(player)
+	def attack(self, player, **kwargs):
+		while len(player.hand)>2:
+			card = player.selectCard(message='Choose discard')
+			player.resolveEvent(Discard, card=card)
+		player.resolveEvent(Draw)
+		
+class WildHunt(Action, Gathering):
+	name = 'Wild Hunt'
+	def __init__(self, session, **kwargs):
+		super(WildHunt, self).__init__(session, **kwargs)
+		Gathering.__init__(self, session, **kwargs)
+		self.coinPrice.set(5)
+	def onPlay(self, player, **kwargs):
+		super(WildHunt, self).onPlay(player, **kwargs)
+		
+		if player.user(('Estate', 'Draw'), 'Choose mode'):
+			player.resolveEvent(DrawCards, amnt=3)
+			player.resolveEvent(AddToken, to=self.session.piles['Wild Hunt'], token=VP(self.session))
+		else:
+			if player.resolveEvent(GainFromPile, frm=self.session.piles['Estate']): player.resolveEvent(TakeVPs, frm=self.session.piles['Wild Hunt'])
+		
+empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress, ChariotRace, FarmersMarket, EncampmentPlunder, Engineer, Overlord, PatricianEmporium, Castles, Sacrifice, Temple, Archive, Charm, Forum, Legionary, WildHunt]
 
 cardSets = {
 	'testCards': testCards,

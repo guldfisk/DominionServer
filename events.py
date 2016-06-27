@@ -204,11 +204,16 @@ class AddVictory(Event):
 	def payload(self, **kwargs):
 		self.player.victories += self.amnt
 		
+class Shuffle(Event):
+	name = 'Shuffle'
+	def payload(self, **kwargs):
+		random.shuffle(self.player.library)
+		
 class Reshuffle(Event):
 	name = 'Reshuffle'
 	def payload(self, **kwargs):
 		while self.player.discardPile: self.player.library.append(self.player.discardPile.pop())
-		random.shuffle(self.player.library)
+		self.spawnTree(Shuffle).resolve()
 		
 class RequestCard(Event):
 	name = 'RequestCard'
@@ -343,9 +348,9 @@ class ResolveAttack(Event):
 class MoveToken(Event):
 	name = 'MoveToken'
 	def payload(self, **kwargs):
-		i = self.frm.index(self.token)
+		i = self.frm.tokens.index(self.token)
 		if i==None: return
-		self.token = self.frm.pop(i)
+		self.token = self.frm.tokens.pop(i)
 		self.spawn(AddToken).resolve()
 		return self.token
 		
@@ -367,9 +372,7 @@ class DestroyToken(Event):
 	def check(self, **kwargs):
 		if not self.token in self.frm.tokens: return True
 	def payload(self, **kwargs):
-		print('PAYLOAD', self.frm.tokens)
 		self.frm.tokens.remove(self.token)
-		print('LOAD', self.frm)
 		return self.token
 		
 class TakeVPs(Event):
