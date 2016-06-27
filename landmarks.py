@@ -4,16 +4,12 @@ class Battlefield(Landmark):
 	name = 'Battlefield'
 	def __init__(self, session, **kwargs):
 		super(Battlefield, self).__init__(session, **kwargs)
-		self.points = len(session.players)*6
+		for i in range(6*len(session.players)): session.resolveEvent(AddToken, token=VP(session), to=self)
 		session.connectCondition(Trigger, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
-	def view(self, **kwargs):
-		return self.name+'('+str(self.points)+')'
 	def conditionGain(self, **kwargs):
 		return 'VICTORY' in kwargs['card'].types
 	def resolveGain(self, **kwargs):
-		if not self.points: return
-		self.points -= 2
-		kwargs['player'].resolveEvent(AddVictory, amnt=2)
+		kwargs['player'].resolveEvent(TakeVPs, amnt=2, frm=self)
 		
 class Fountain(Landmark):
 	name = 'Fountain'

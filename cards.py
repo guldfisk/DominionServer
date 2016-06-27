@@ -606,6 +606,7 @@ class Contraband(Treasure):
 		super(Contraband, self).onPlay(player, **kwargs)
 		player.resolveEvent(AddBuy)
 		pile = self.session.getNextPlayer(player).getPile()
+		player.resolveEvent(Message, content='Banning', pile=pile)
 		self.session.connectCondition(self.ContrabandBan, source=self, banning=pile)
 	
 class CountingHouse(Action):
@@ -1985,9 +1986,6 @@ class ChariotRace(Action):
 		player.resolveEvent(AddCoin)
 		player.resolveEvent(AddVictory)
 		
-class VP(Token):
-	name = 'VP Token'
-		
 class FarmersMarket(Action, Gathering):
 	name = "Farmer's Market"
 	def __init__(self, session, **kwargs):
@@ -2125,7 +2123,7 @@ class HumbleCastle(Treasure, Victory, Castle):
 		super(HumbleCastle, self).__init__(session, **kwargs)
 		Victory.__init__(self, session, **kwargs)
 		Castle.__init__(self, session, **kwargs)
-		self.victoryValue.set(1)
+		self.coinValue.set(1)
 		self.coinPrice.set(3)
 	def onGameEnd(self, player, **kwargs):
 		return len([o for o in player.owns if 'CASTLE' in o.types])
@@ -2145,23 +2143,216 @@ class CrumblingCastle(Victory, Castle):
 		kwargs['player'].resolveEvent(GainFromPile, frm=self.session.piles['Silver'])
 		kwargs['player'].resolveEvent(AddVictory)
 
-class HumbleCastle(Action, Victory, Castle):
-	name = 'Humble Castle'
+class SmallCastle(Action, Victory, Castle):
+	name = 'Small Castle'
 	def __init__(self, session, **kwargs):
-		super(HumbleCastle, self).__init__(session, **kwargs)
+		super(SmallCastle, self).__init__(session, **kwargs)
 		Victory.__init__(self, session, **kwargs)
 		Castle.__init__(self, session, **kwargs)
 		self.victoryValue.set(2)
 		self.coinPrice.set(5)
 	def onPlay(self, player, **kwargs):
-		super(HumbleCastle, self).onPlay(player, **kwargs)
+		super(SmallCastle, self).onPlay(player, **kwargs)
 		options = [self.card]+[o for o in player.hand if 'CASTLE' in o.types]
 		choice = options[player.user(options, 'Choose trash')]
 		if choice==self.card: card = player.resolveEvent(Trash, frm=player.inPlay, card=choice)
 		else: card = player.resolveEvent(Trash, frm=player.hand, card=choice)
 		if card: player.resolveEvent(GainFromPile, frm=self.session.piles['Castles'])
+			
+class HauntedCastle(Victory, Castle):
+	name = 'Haunted Castle'
+	def __init__(self, session, **kwargs):
+		super(HauntedCastle, self).__init__(session, **kwargs)
+		Castle.__init__(self, session, **kwargs)
+		self.victoryValue.set(2)
+		self.coinPrice.set(6)
+		self.connectCondition(Trigger, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def conditionGain(self, **kwargs):
+		return kwargs['card']==self.card and self.session.activePlayer==kwargs['player']
+	def resolveGain(self, **kwargs):
+		kwargs['player'].resolveEvent(GainFromPile, frm=self.session.piles['Gold'])
+		for aplayer in self.session.getOtherPlayers(self.owner):
+			while len(aplayer.hand)>3:
+				aplayer.resolveEvent(MoveCard, frm=aplayer.hand, to=aplayer.library, card=aplayer.selectCard(message='Choose top'))
+			
+class OpulentCastle(Action, Victory, Castle):
+	name = 'Opulent Castle'
+	def __init__(self, session, **kwargs):
+		super(OpulentCastle, self).__init__(session, **kwargs)
+		Victory.__init__(self, session, **kwargs)
+		Castle.__init__(self, session, **kwargs)
+		self.victoryValue.set(3)
+		self.coinPrice.set(7)
+	def onPlay(self, player, **kwargs):
+		super(OpulentCastle, self).onPlay(player, **kwargs)
+		cards = player.selectCards(optional=True, message='Choose discard', restriction=lambda o: 'VICTORY' in o.types)
+		for card in cards: player.resolveEvent(Discard, card=card)
+		player.resolveEvent(AddCoin, amnt=2*len(cards))
+			
+class SprawlingCastle(Victory, Castle):
+	name = 'Sprawling Castle'
+	def __init__(self, session, **kwargs):
+		super(SprawlingCastle, self).__init__(session, **kwargs)
+		Castle.__init__(self, session, **kwargs)
+		self.victoryValue.set(4)
+		self.coinPrice.set(8)
+		self.connectCondition(Trigger, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def conditionGain(self, **kwargs):
+		return kwargs['card']==self.card
+	def resolveGain(self, **kwargs):
+		if kwargs['player'].user(('3 Estates', 'Duchy'), 'Choose gain'): kwargs['player'].resolveEvent(GainFromPile, frm=self.session.piles['Duchy'])
+		else:
+			for i in range(3): kwargs['player'].resolveEvent(GainFromPile, frm=self.session.piles['Estate'])
 		
-empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress, ChariotRace, FarmersMarket, EncampmentPlunder, Engineer, Overlord, PatricianEmporium]
+class GrandCastle(Victory, Castle):
+	name = 'GrandCastle'
+	def __init__(self, session, **kwargs):
+		super(GrandCastle, self).__init__(session, **kwargs)
+		Castle.__init__(self, session, **kwargs)
+		self.victoryValue.set(5)
+		self.coinPrice.set(9)
+		self.connectCondition(Trigger, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def conditionGain(self, **kwargs):
+		return kwargs['card']==self.card
+	def resolveGain(self, **kwargs):
+		vics = 0
+		for card in kwargs['player'].hand:
+			kwargs['player'].resolveEvent(Reveal, card=card)
+			if 'VICTORY' in card.types: vics+=1
+		kwargs['player'].resolveEvent(AddVictory, amnt=vics+len([o for o in kwargs['player'].inPlay if 'VICTORY' in o.types]))
+
+class KingsCastle(Victory, Castle):
+	name = "King's Castle"
+	def __init__(self, session, **kwargs):
+		super(KingsCastle, self).__init__(session, **kwargs)
+		Castle.__init__(self, session, **kwargs)
+		self.coinPrice.set(10)
+	def onGameEnd(self, player, **kwargs):
+		return len([o for o in player.owns if 'CASTLE' in o.types])*2
+
+class Castles(Victory, Castle):
+	name = 'Castles'
+	def __init__(self, session, **kwargs):
+		super(Castles, self).__init__(session, **kwargs)
+		Castle.__init__(self, session, **kwargs)
+	def onPileCreate(self, pile, session, **kwargs):
+		if len(session.players)>2:
+			for i in range(2): pile.addCard(KingsCastle)
+			for i in range(2): pile.addCard(GrandCastle)
+			pile.addCard(SprawlingCastle)
+			pile.addCard(OpulentCastle)
+			pile.addCard(HauntedCastle)
+			pile.addCard(SmallCastle)
+			for i in range(2): pile.addCard(CrumblingCastle)
+			for i in range(2): pile.addCard(HumbleCastle)
+		else:
+			pile.addCard(KingsCastle)
+			pile.addCard(GrandCastle)
+			pile.addCard(SprawlingCastle)
+			pile.addCard(OpulentCastle)
+			pile.addCard(HauntedCastle)
+			pile.addCard(SmallCastle)
+			pile.addCard(CrumblingCastle)
+			pile.addCard(HumbleCastle)
+		
+class Sacrifice(Action):
+	name = 'Sacrifice'
+	def __init__(self, session, **kwargs):
+		super(Sacrifice, self).__init__(session, **kwargs)
+		self.coinPrice.set(4)
+	def onPlay(self, player, **kwargs):
+		super(Sacrifice, self).onPlay(player, **kwargs)
+		card = player.selectCard(message='Choose trash')
+		if not card: return
+		player.resolveEvent(Trash, frm=player.hand, card=card)
+		if 'ACTION' in card.types:
+			player.resolveEvent(AddAction, amnt=2)
+			player.resolveEvent(DrawCards, amnt=2)
+		if 'TREASURE' in card.types: player.resolveEvent(AddCoin, amnt=2)
+		if 'VICTORY' in card.types: player.resolveEvent(AddVictory, amnt=2)
+		
+class Temple(Action, Gathering):
+	name = 'Temple'
+	def __init__(self, session, **kwargs):
+		super(Temple, self).__init__(session, **kwargs)
+		Gathering.__init__(self, session, **kwargs)
+		self.coinPrice.set(4)
+		self.connectCondition(Trigger, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
+	def onPlay(self, player, **kwargs):
+		super(Temple, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddVictory)
+		seen = set()
+		cards = player.selectCards(frm=[o for o in player.hand if not o.name in seen and not seen.add(o.name)], message='Choose trash', optional=True, minimum=1, maximum=3)
+		for card in cards:
+			player.resolveEvent(Trash, frm=player.hand, card=card)
+			player.resolveEvent(AddToken, to=self.session.piles['Temple'], token=VP(self.session))
+	def conditionGain(self, **kwargs):
+		return kwargs['card']==self.card
+	def resolveGain(self, **kwargs):
+		kwargs['player'].resolveEvent(TakeVPs, frm=self.session.piles['Temple'])
+
+class Archive(Action, Duration):
+	name = 'Archive'
+	def __init__(self, session, **kwargs):
+		super(Archive, self).__init__(session, **kwargs)
+		Duration.__init__(self, session, **kwargs)
+		self.coinPrice.set(5)
+		self.saveds = []
+		self.connectCondition(Trigger, trigger='startTurn', source=self, resolve=self.resolveTurn, condition=self.conditionTurn)
+	def onPlay(self, player, **kwargs):
+		super(Archive, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddAction)
+		cards = player.resolveEvent(RequestCards, amnt=3)
+		if not cards: return
+		for card in cards: player.resolveEvent(MoveCard, frm=player.library, to=player.mats['ArchiveMat'], card=card)
+		card = player.selectCard(frm=cards, message='Choose retrieve')
+		if card:
+			cards.remove(card)
+			player.resolveEvent(MoveCard, frm=player.mats['ArchiveMat'], to=player.hand, card=card)
+		self.saveds.append(cards)
+	def conditionTurn(self, **kwargs):
+		return kwargs['player']==self.owner and self.card in self.owner.inPlay
+	def resolveTurn(self, **kwargs):
+		self.owner.resolveEvent(ResolveDuration, card=self.card)
+	def duration(self, **kwargs):
+		for i in range(len(self.saveds)-1, -1, -1):
+			card = self.owner.selectCard(frm=self.saveds[i])
+			if card:
+				self.saveds[i].remove(card)
+				self.owner.resolveEvent(MoveCard, frm=self.owner.mats['ArchiveMat'], to=self.owner.hand, card=card)
+			if not self.saveds[i]:
+				del self.saveds[i]
+				continue
+	def conditionDestroy(self, **kwargs):
+		if not kwargs['card']==self.card: return False
+		if self.saveds: return True
+	def onPileCreate(self, pile, session, **kwargs):
+		super(Archive, self).onPileCreate(pile, session, **kwargs)
+		session.addMat('ArchiveMat', private=True)
+
+"""		
+class Charm(Treasure):
+	name = 'Charm'
+	class EnchantressAttack(DelayedTrigger):
+		name = 'EnchantressAttack'
+		defaultTrigger = 'Buy'
+		def condition(self, **kwargs):
+			return 'ACTION' in kwargs['card'].types and kwargs['player']==self.attacking
+		def resolve(self, event, **kwargs):
+			event.spawn(AddAction, amnt=1).resolve()
+			event.spawn(Draw).resolve()
+		def terminateCondition(self, **kwargs):
+			return kwargs['player']==self.attacking
+	def __init__(self, session, **kwargs):
+		super(Charm, self).__init__(session, **kwargs)
+		self.coinPrice.set(5)
+	def onPlay(self, player, **kwargs):
+		super(Charm, self).onPlay(player, **kwargs)
+		Duration.onPlay(self, player, **kwargs)
+		self.attackOpponents(player)
+"""
+		
+empires = [CityQuarter, RoyalBlacksmith, Villa, GladiatorFortune, Capital, SettlersBustlingVillage, CatapultRocks, Crown, GroundsKeeper, Enchantress, ChariotRace, FarmersMarket, EncampmentPlunder, Engineer, Overlord, PatricianEmporium, Castles, Sacrifice, Temple, Archive]
 
 cardSets = {
 	'testCards': testCards,

@@ -97,12 +97,10 @@ Hele json'en der bliver sendt ser sådan ud:
 		'landmarks': {
 			'landmark 1': {
 				'tokens': tokens,
-				'points': points
 			},
 			...,
 			'landmark n': {
 				'tokens': tokens,
-				'points': points
 			}
 		},
 		'nonSupplyPiles': {

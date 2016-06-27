@@ -10,7 +10,7 @@ Det her ligner noget generel client input prob ala den lagger et input baguede a
 
 Rule inconsistencies----------------------------------------------------
 *Chains af TRE'er ind i durations resultere i at alle TRE'er forbliver i spil, da de alle er linkede. Der bør dog kun forblive et antal tilsvarende den mængde der skal bruges for at repræsentere hvad der sker næste tur.
-eks: TRE->TRE-duration bør det kun være den sidste TRE der forbliver i spil, mens TRE->TRE->duration+duration kræver begge.
+eks: TRE->TRE->duration bør det kun være den sidste TRE der forbliver i spil, mens TRE->TRE->duration+duration kræver begge.
 *Effekter der søger i discardpile leder i hele discard pile, selv om de noget af tiden kun bør kunne se toppen.
 eks: Summon bør ikke kunne finde det summonede kort, hvis det gainer andre kort ongain, da disse ligger på toppen.
 Effekter kan kun se hele discardpile, hvis de er en del af en "look through your discard pile" el. lign.
@@ -23,6 +23,5 @@ Andet shit--------------------------------------------------------------
 *Tokens er virkeligt inkonsistente, og VP-counters er ikke tokens, selv om de nok burde være det.
 *Ekstra ture er håndteret virkeligt dumt
 *Event-log lookups er fucking cancer
-*Contraband burde sige hva banned
-*save burde ikke være public
-*switch and library ui
+*Switch and library ui
+*Når der er mange TRE'er skal man stakke sådan en billion replacements, som alle sammen er ligegyldige. Det er virkeligt besværligt at lave en metode til at finde ud af hvornår det faktisk betyder noget for spilleren at stakke dem.

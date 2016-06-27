@@ -39,7 +39,6 @@ class CPile(list):
 	def getView(self, player=None):
 		if self.canSee(player): return self.getFullView()
 		else: return str(len(self))+' cards'
-	
 	def fullJView(self):
 		return {'cards': [c.jview() for c in self]}
 	def jview(self, player=None):
@@ -280,7 +279,7 @@ def makeGame(game, base = [], cardm={}, deventm={}, landm={}, king=''):
 	cards = []
 	devents = []
 	lands = []
-	for c in re.finditer('(\d+)? ?([a-z]+)', king, re.IGNORECASE):
+	for c in re.finditer(" ?(\d+)? ?([a-z'/ ]+)", king, re.IGNORECASE):
 		amnt, cont = c.groups()
 		if amnt: amnt = int(amnt)
 		if amnt!=None:
@@ -474,13 +473,13 @@ class Player(object):
 		self.calcVP()
 	def sessionEnd(self, **kwargs):
 		self.session = None
-	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, minimum=0, **kwargs):
+	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, minimum=0, maximum=0, **kwargs):
 		if frm==None: frm=self.hand
 		options = [o for o in copy.copy(frm) if not(restriction and not restriction(o))]
 		if not options: return []
 		chosen = []
 		def select():
-			if not options: return True
+			if not options or maximum and len(chosen)>=maximum: return True
 			if optional and len(chosen)>=minimum:
 				choice = self.user([o.view() for o in options]+['Done choosing'], message)
 				if choice+1>len(options): return True
@@ -580,7 +579,10 @@ class Token(object):
 		else: return self.name
 	def connectCondition(self, tp, **kwargs):
 		self.session.connectCondition(tp, **kwargs)
-	
+
+class VP(Token):
+	name = 'VP Token'
+		
 class Pile(CPile):
 	def __init__(self, cardType, session, *args, **kwargs):
 		super(Pile, self).__init__(*args, **kwargs)
@@ -748,12 +750,11 @@ class Landmark(WithPAs):
 		self.session = session
 		self.tokens = CPile(name='tokens')
 		self.owner = None
-		self.points = None
 	def view(self, **kwargs):
 		if self.tokens: return self.name+'('+self.tokens.getView()+')'
 		else: return self.name
 	def jview(self, **kwargs):
-		return {'tokens': self.tokens.jview(), 'points': self.points}
+		return {'tokens': self.tokens.jview()}
 	def onGameEnd(self, player, **kwargs):
 		pass
 	

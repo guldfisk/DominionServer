@@ -39,7 +39,7 @@ class Save(DEvent):
 	def __init__(self, session, **kwargs):
 		super(Save, self).__init__(session, **kwargs)
 		self.coinPrice.set(1)
-		session.addMat('Saving')
+		session.addMat('Saving', private=True)
 		self.session.connectCondition(Trigger, trigger='startTurn', source=self, resolve=self.resolveBegin)
 	def onBuy(self, player, **kwargs):
 		if not self.checkBefore(player): return

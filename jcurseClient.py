@@ -172,9 +172,11 @@ class MultiWindow(dict):
 		pass
 	
 def lcts(cards):
-	#print(type(cards), cards)
+	def gs(c):
+		if 'owner' in c and c['owner']: return c['name']+'('+c['owner']+')'
+		else: return c['name']
 	ud = ''
-	names = [c['name'] for c in cards]
+	names = [gs(c) for c in cards]
 	unames = set(names)
 	for name in unames: ud+=str(names.count(name))+' '+name+', '
 	return ud
@@ -221,7 +223,6 @@ def landsts(d):
 	ud = ''
 	for key in sorted(d):
 		ud += key
-		if d[key]['points']!=None: ud += ' '+str(d[key]['points'])
 		if d[key]['tokens']['cards']: ud+= '('+pts(d[key]['tokens'])+')'
 		ud += ', '
 	return ud

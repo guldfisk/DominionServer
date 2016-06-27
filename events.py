@@ -374,10 +374,14 @@ class DestroyToken(Event):
 		
 class TakeVPs(Event):
 	name = 'TakeVPs'
+	def setup(self, **kwargs):
+		if not hasattr(self, 'amnt'): self.amnt = None
 	def payload(self, **kwargs):
-		self.amnt = 0
+		self.taken = 0
 		for token in copy.copy(self.frm.tokens):
-			if token.name=='VP Token' and self.spawnTree(DestroyToken, token=token).resolve(): self.amnt+=1
+			if token.name=='VP Token' and self.spawnTree(DestroyToken, token=token).resolve(): self.taken+=1
+			if self.amnt!=None and self.taken>=self.amnt: break
+		self.amnt = self.taken
 		self.spawnTree(AddVictory).resolve()
 				
 class ResolveDuration(Event):
