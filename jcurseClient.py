@@ -183,7 +183,7 @@ def lcts(cards):
 	
 def pts(pile):
 	if 'cards' in pile: return lcts(pile['cards'])
-	return 'length: '+pile['length']
+	return 'length: '+str(pile['length'])
 	
 def statts(d):
 	ud = ''

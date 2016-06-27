@@ -154,7 +154,7 @@ class Labyrinth(Landmark):
 	def conditionGain(self, **kwargs):
 		gained = 0
 		for i in range(len(self.session.events)-1, -1, -1):
-			if self.session.events[i][0]=='Gain' and self.session.events[i][1]['player']==player: gained+=1
+			if self.session.events[i][0]=='Gain' and self.session.events[i][1]['player']==kwargs['player']: gained+=1
 			elif self.session.events[i][0]=='startTurn': break
 		return gained==2
 	def resolveGain(self, **kwargs):
