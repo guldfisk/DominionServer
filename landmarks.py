@@ -125,7 +125,7 @@ class DefiledShrine(Landmark):
 		name = 'DefiledShrineSetup'
 		defaultTrigger = 'globalSetup'
 		def resolve(self, **kwargs):
-			for pile in self.source.piles:
+			for pile in self.session.piles:
 				if 'ACTION' in self.source.session.piles[pile].maskot.types and not 'GATHERING' in self.source.session.piles[pile].maskot.types :
 					for i in range(2): self.source.session.resolveEvent(AddToken, to=self.source.session.piles[pile], token=VP(self.source.session))
 	def __init__(self, session, **kwargs):
@@ -160,7 +160,6 @@ class Labyrinth(Landmark):
 	def resolveGain(self, **kwargs):
 		kwargs['player'].resolveEvent(TakeVPs, amnt=2, frm=self)
 		
-	
 class MountainPass(Landmark):
 	name = 'Mountain Pass'
 	class FirstProvince(DelayedTrigger):
@@ -187,8 +186,61 @@ class MountainPass(Landmark):
 		super(MountainPass, self).__init__(session, **kwargs)
 		session.connectCondition(self.FirstProvince, source=self)
 
-				
-empiresLandmarks = [Battlefield, Fountain, Keep, Tomb, WolfDen, Aquaduct, Arena, BanditFort, Basilica, Baths, Colonnade, DefiledShrine, Labyrinth]
+class Museum(Landmark):
+	name = 'Museum'
+	def onGameEnd(self, player, **kwargs):
+		return len(set([o.name for o in player.owns]))*2
+
+class ObeliskToken(Token):
+	name = 'ObeliskToken'
+		
+class Obelisk(Landmark):
+	name = 'Obelisk'
+	class ObeliskSetup(DelayedTrigger):
+		name = 'ObeliskSetup'
+		defaultTrigger = 'globalSetup'
+		def resolve(self, **kwargs):
+			pile = self.source.session.piles[random.choice(list(self.session.piles))]
+			self.source.targeting = pile
+			self.session.resolveEvent(AddToken, to=pile, token=ObeliskToken(self.source.session))
+	def __init__(self, session, **kwargs):
+		super(Obelisk, self).__init__(session, **kwargs)
+		session.connectCondition(self.ObeliskSetup, source=self)
+		self.targeting = None
+	def onGameEnd(self, player, **kwargs):
+		return [o.frmPile for o in player.owns].count(self.targeting)*2
+
+class Orchard(Landmark):
+	name = 'Orchard'
+	def onGameEnd(self, player, **kwargs):
+		cards = [o.name for o in player.owns if 'ACTION' in o.types]
+		uniques = set(cards)
+		return len([o for o in uniques if cards.count(o)>=3])*4
+
+class Palace(Landmark):
+	name = 'Palace'
+	def onGameEnd(self, player, **kwargs):
+		cards = [o.name for o in player.owns]
+		return min(cards.count('Copper'), cards.count('Silver'), cards.count('Gold'))*3
+		
+class Tower(Landmark):
+	name = 'Tower'
+	def onGameEnd(self, player, **kwargs):
+		return len([o.name for o in player.owns if 'ACTION' in o.types and len(o.frmPile)==0])
+
+class TriumphalArch(Landmark):
+	name = 'Triumphal Arch'
+	def onGameEnd(self, player, **kwargs):
+		cards = [o.name for o in player.owns if 'ACTION' in o.types]
+		uniques = set(cards)
+		d = sorted([cards.count(key) for key in uniques])
+		if len(d)>1: return 2*d[-2]
+
+class Wall(Landmark):
+	name = 'Wall'
+	def onGameEnd(self, player, **kwargs):
+		return -max(len(player.owns)-15, 0)
+empiresLandmarks = [Battlefield, Fountain, Keep, Tomb, WolfDen, Aquaduct, Arena, BanditFort, Basilica, Baths, Colonnade, DefiledShrine, Labyrinth, Museum, Obelisk, Palace, Tower, TriumphalArch, Wall]
 
 landmarkSets = {
 	'empiresLandmarks': empiresLandmarks

@@ -57,6 +57,7 @@ class OnlinePlayer(server.CST):
 		self.defaultRecvLen = 4
 		self.player = None
 		self.indents = []
+		self.sendJson('CONN')
 		#self.deventPM = probMap((0.1, 0.5, 0.4))
 		#self.landmarkPM = probMap((0.1, 0.5, 0.4))
 	def linkPlayer(self, player):
@@ -80,7 +81,7 @@ class OnlinePlayer(server.CST):
 		h = head.encode('UTF-8')
 		assert (len(h)==4), 'Wrong head length'
 		if content: s = json.dumps(content).encode('UTF-8')
-		else: s = ''
+		else: s = b''
 		i = struct.pack('I', len(s))
 		self.send(h+i+s)
 	def sendPayload(self, head, payload):
