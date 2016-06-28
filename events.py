@@ -390,7 +390,7 @@ class TakeVPs(Event):
 class ResolveDuration(Event):
 	name = 'ResolveDuration'
 	def payload(self, **kwargs):
-		self.card.duration(**kwargs)
+		self.card.duration(self.player, **kwargs)
 		
 class DiscardDeck(Event):
 	name = 'DiscardDeck'

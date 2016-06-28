@@ -7,6 +7,7 @@ Det her ligner noget generel client input prob ala den lagger et input baguede a
 *Random crash - lighthouses lige empty? crown på peaseant? kan ikke reproducere
 *Crash i endgame efter flere addvictory, kun basis victory kort og curses. kan ikke reproducere
 *Teacher boon tokens. Det er kun den sidst lagte der virker? kan ikke reproducere
+*TRE outpost
 
 Rule inconsistencies----------------------------------------------------
 *Chains af TRE'er ind i durations resultere i at alle TRE'er forbliver i spil, da de alle er linkede. Der bør dog kun forblive et antal tilsvarende den mængde der skal bruges for at repræsentere hvad der sker næste tur.

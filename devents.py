@@ -484,7 +484,7 @@ class Wedding(DEvent):
 class Conquest(DEvent):
 	name = 'Conquest'
 	def __init__(self, session, **kwargs):
-		super(Wedding, self).__init__(session, **kwargs)
+		super(Conquest, self).__init__(session, **kwargs)
 		self.coinPrice.set(6)
 	def onBuy(self, player, **kwargs):
 		for i in range(2): player.resolveEvent(GainFromPile, frm=self.session.piles['Silver'])

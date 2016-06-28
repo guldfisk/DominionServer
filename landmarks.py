@@ -102,7 +102,7 @@ class Baths(Landmark):
 		session.connectCondition(Trigger, trigger='endTurn', source=self, resolve=self.resolveTurn, condition=self.conditionTurn)
 	def conditionTurn(self, **kwargs):
 		for i in range(len(self.session.events)-1, -1, -1):
-			if self.session.events[i][0]=='Gain' and self.session.events[i][1]['player']==player: return False
+			if self.session.events[i][0]=='Gain' and self.session.events[i][1]['player']==kwargs['player']: return False
 			elif self.session.events[i][0]=='startTurn': break
 		return True
 	def resolveTurn(self, **kwargs):
@@ -160,14 +160,14 @@ class Labyrinth(Landmark):
 	def resolveGain(self, **kwargs):
 		kwargs['player'].resolveEvent(TakeVPs, amnt=2, frm=self)
 		
-"""		
+	
 class MountainPass(Landmark):
 	name = 'Mountain Pass'
 	class FirstProvince(DelayedTrigger):
 		name = 'FirstProvince'
 		defaultTrigger = 'Gain'
 		def condition(self, **kwargs):
-			return kwargs['card'}.name=='Province'
+			return kwargs['card'].name=='Province'
 		def resolve(self, **kwargs):
 			self.session.connectCondition(self.Bidding, source=self.source, player=kwargs['player'])
 	class Bidding(DelayedTrigger):
@@ -175,15 +175,18 @@ class MountainPass(Landmark):
 		defaultTrigger = 'turnEnded'
 		def resolve(self, **kwargs):
 			high = 0
-			winner = 0
+			winner = None
 			for player in self.session.getPlayers(self.session.getNextPlayer(self.player)):
 				bid = player.user(list(range(high, 41)), 'Choose bid')
 				player.resolveEvent(Message, content=bid)
-				if bid>high: winner = 10
+				if bid>high: winner = player
+			if winner:
+				winner.resolveEvent(AddVictory, amnt=8)
+				winner.resolveEvent(AddDebt, amnt=high)
 	def __init__(self, session, **kwargs):
 		super(MountainPass, self).__init__(session, **kwargs)
 		session.connectCondition(self.FirstProvince, source=self)
-"""
+
 				
 empiresLandmarks = [Battlefield, Fountain, Keep, Tomb, WolfDen, Aquaduct, Arena, BanditFort, Basilica, Baths, Colonnade, DefiledShrine, Labyrinth]
 

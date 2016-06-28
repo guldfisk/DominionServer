@@ -1,7 +1,7 @@
 from dombase import *
 
 class ProHunterDogKeeper(Treasure):
-	name = 'Pro Hunter Dog Keeper'
+	name = 'phdk'
 	def __init__(self, session, **kwargs):
 		super(ProHunterDogKeeper, self).__init__(session, **kwargs)
 		self.coinValue.set(255)
@@ -672,7 +672,7 @@ class Rabble(Action, Attack):
 	def attack(self, player, **kwargs):
 		cards = player.resolveEvent(RequestCards, amnt=3)
 		for card in cards:
-			if 'ACTION' in cards.types or 'TREASURE' in card.types: player.resolveEvent(Discard, frm=player.library, card=card)
+			if 'ACTION' in card.types or 'TREASURE' in card.types: player.resolveEvent(Discard, frm=player.library, card=card)
 
 class Vault(Action):
 	name = 'Vault'
@@ -882,8 +882,8 @@ class Haven(Action, Duration):
 		if not card: return
 		card = player.resolveEvent(MoveCard, frm=player.hand, to=player.mats['HavenMat'], card=card)
 		if card: self.saved.append(card)
-	def duration(self, **kwargs):
-		while self.saved: self.owner.resolveEvent(MoveCard, frm=self.owner.mats['HavenMat'], to=self.owner.hand, card=self.saved.pop())
+	def duration(self, player, **kwargs):
+		while self.saved: player.resolveEvent(MoveCard, frm=player.mats['HavenMat'], to=player.hand, card=self.saved.pop())
 	def onPileCreate(self, pile, session, **kwargs):
 		super(Haven, self).onPileCreate(pile, session, **kwargs)
 		session.addMat('HavenMat', private=True)
@@ -905,8 +905,8 @@ class Lighthouse(Action, Duration):
 		Duration.onPlay(self, player, **kwargs)
 		player.resolveEvent(AddAction)
 		player.resolveEvent(AddCoin)
-	def duration(self, **kwargs):
-		self.owner.resolveEvent(AddCoin)
+	def duration(self, player, **kwargs):
+		player.resolveEvent(AddCoin)
 	def conditionReact(self, **kwargs):
 		return self.owner and self.card in self.owner.inPlay and 'ATTACK' in kwargs['card'].types and self.owner!=kwargs['player']
 	def resolveReact(self, event, **kwargs):
@@ -980,9 +980,9 @@ class FishingVillage(Action, Duration):
 		Duration.onPlay(self, player, **kwargs)
 		player.resolveEvent(AddCoin)
 		player.resolveEvent(AddAction, amnt=2)
-	def duration(self, **kwargs):
-		self.owner.resolveEvent(AddCoin)
-		self.owner.resolveEvent(AddAction)
+	def duration(self, player, **kwargs):
+		player.resolveEvent(AddCoin)
+		player.resolveEvent(AddAction)
 
 class Lookout(Action):
 	name = 'Lookout'
@@ -1038,8 +1038,8 @@ class Caravan(Action, Duration):
 		Duration.onPlay(self, player, **kwargs)
 		player.resolveEvent(AddAction)
 		player.resolveEvent(Draw)
-	def duration(self, **kwargs):
-		self.owner.resolveEvent(Draw)
+	def duration(self, player, **kwargs):
+		player.resolveEvent(Draw)
 		
 class Cutpurse(Action, Attack):
 	name = 'Cutpurse'
@@ -1206,8 +1206,8 @@ class MerchantShip(Action, Duration):
 		super(MerchantShip, self).onPlay(player, **kwargs)
 		Duration.onPlay(self, player, **kwargs)
 		player.resolveEvent(AddCoin, amnt=2)
-	def duration(self, **kwargs):
-		self.owner.resolveEvent(AddCoin, amnt=2)
+	def duration(self, player, **kwargs):
+		player.resolveEvent(AddCoin, amnt=2)
 
 class Outpost(Action, Duration):
 	name = 'Outpost'
@@ -1222,8 +1222,8 @@ class Outpost(Action, Duration):
 	def outpostTurn(self, **kwargs):
 		turns = 0
 		for i in range(len(self.session.events)-1, -1, -1):
-			if self.session.events[0]=='startTurn':
-				if self.session.event[1]['player']==self: turns+=1
+			if self.session.events[i][0]=='startTurn':
+				if self.session.events[i][1]['player']==kwargs['player']: turns += 1
 				else: break
 		if turns>1: return
 		self.session.activePlayer = kwargs['player']
@@ -1247,10 +1247,10 @@ class Tactician(Action, Duration):
 		if not player.hand: return
 		player.discardHand()
 		self.session.connectCondition(self.DurationTrigger, source=self.card)
-	def duration(self, **kwargs):
-		self.owner.resolveEvent(DrawCards, amnt=5)
-		self.owner.resolveEvent(AddBuy)
-		self.owner.resolveEvent(AddAction)
+	def duration(self, player, **kwargs):
+		player.resolveEvent(DrawCards, amnt=5)
+		player.resolveEvent(AddBuy)
+		player.resolveEvent(AddAction)
 
 class Treasury(Action):
 	name = 'Treasury'
@@ -1283,9 +1283,9 @@ class Wharf(Action, Duration):
 		Duration.onPlay(self, player, **kwargs)
 		player.resolveEvent(DrawCards, amnt=2)
 		player.resolveEvent(AddBuy)
-	def duration(self, **kwargs):
-		self.owner.resolveEvent(DrawCards, amnt=2)
-		self.owner.resolveEvent(AddBuy)
+	def duration(self, player, **kwargs):
+		player.resolveEvent(DrawCards, amnt=2)
+		player.resolveEvent(AddBuy)
 		
 seaside = [Embargo, Haven, Lighthouse, NativeVillage, PearlDiver, Ambassador, FishingVillage, Lookout, Smugglers, Caravan, Cutpurse, Island, Navigator, PirateShip, Salvager, SeaHag, TreasureMap, Bazaar, Explorer, GhostShip, MerchantShip, Outpost, Tactician, Treasury, Wharf]
 
@@ -1962,8 +1962,8 @@ class Enchantress(Action, Duration, Attack):
 		super(Enchantress, self).onPlay(player, **kwargs)
 		Duration.onPlay(self, player, **kwargs)
 		self.attackOpponents(player)
-	def duration(self, **kwargs):
-		self.owner.resolveEvent(DrawCards, amnt=2)
+	def duration(self, player, **kwargs):
+		player.resolveEvent(DrawCards, amnt=2)
 	def attack(self, player, **kwargs):
 		self.session.connectCondition(self.EnchantressAttack, source=self.card, attacking=player)
 
@@ -2314,12 +2314,12 @@ class Archive(Action, Duration):
 		return kwargs['player']==self.owner and self.card in self.owner.inPlay
 	def resolveTurn(self, **kwargs):
 		self.owner.resolveEvent(ResolveDuration, card=self.card)
-	def duration(self, **kwargs):
+	def duration(self, player, **kwargs):
 		for i in range(len(self.saveds)-1, -1, -1):
-			card = self.owner.selectCard(frm=self.saveds[i])
+			card = player.selectCard(frm=self.saveds[i])
 			if card:
 				self.saveds[i].remove(card)
-				self.owner.resolveEvent(MoveCard, frm=self.owner.mats['ArchiveMat'], to=self.owner.hand, card=card)
+				player.resolveEvent(MoveCard, frm=self.owner.mats['ArchiveMat'], to=player.hand, card=card)
 			if not self.saveds[i]:
 				del self.saveds[i]
 				continue

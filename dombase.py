@@ -820,15 +820,15 @@ class Duration(object):
 		name = 'DurationTrigger'
 		defaultTrigger = 'startTurn'
 		def condition(self, **kwargs):
-			return kwargs['player']==self.source.owner
+			return kwargs['player']==self.player
 		def resolve(self, **kwargs):
-			self.source.owner.resolveEvent(ResolveDuration, card=self.source)	
+			self.player.resolveEvent(ResolveDuration, card=self.source)
 	def __init__(self, session, **kwargs):
 		if not hasattr(self, 'types'): self.types = []
 		self.types.add('DURATION')
 		self.connectCondition(Replacement, trigger='Destroy', source=self, resolve=self.resolveDestroy, condition=self.conditionDestroy)
 	def onPlay(self, player, **kwargs):
-		self.session.connectCondition(self.DurationTrigger, source=self)
+		self.session.connectCondition(self.DurationTrigger, source=self, player=player)
 	def conditionDestroy(self, **kwargs):
 		if not kwargs['card']==self.card: return False
 		for i in range(len(self.session.events)-1, -1, -1):
@@ -836,7 +836,7 @@ class Duration(object):
 			elif self.session.events[i][0]=='startTurn': return False
 	def resolveDestroy(self, event, **kwargs):
 		return
-	def duration(self, **kwargs):
+	def duration(self, player, **kwargs):
 		pass
 			
 class Reserve(object):
