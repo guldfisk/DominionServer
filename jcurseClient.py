@@ -358,7 +358,7 @@ def recvLen(s, l=4):
 	
 def recvPack(s):
 	head = recvLen(s).decode('UTF-8')
-	l = struct.unpack('I', recvLen(s))[0]
+	l = struct.unpack('>I', recvLen(s))[0]
 	if l: body = json.loads(recvLen(s, l).decode('UTF-8'))
 	else: body = {}
 	return head, body
@@ -368,7 +368,7 @@ def sendPack(s, head, content=None):
 	assert (len(h)==4), 'Wrong head length'
 	if content: st = json.dumps(content).encode('UTF-8')
 	else: st = b''
-	i = struct.pack('I', len(st))
+	i = struct.pack('>I', len(st))
 	s.send(h+i+st)
 	
 def lyt(**kwargs):

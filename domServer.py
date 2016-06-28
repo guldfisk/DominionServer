@@ -82,7 +82,7 @@ class OnlinePlayer(server.CST):
 		assert (len(h)==4), 'Wrong head length'
 		if content: s = json.dumps(content).encode('UTF-8')
 		else: s = b''
-		i = struct.pack('I', len(s))
+		i = struct.pack('>I', len(s))
 		self.send(h+i+s)
 	def sendPayload(self, head, payload):
 		self.send(head.encode('UTF-8')+struct.pack('I', len(payload))+payload)
@@ -121,7 +121,7 @@ class OnlinePlayer(server.CST):
 		gT.start()
 	def recvPack(self):
 		head = self.recvLen().decode('UTF-8')
-		l = struct.unpack('I', self.recvLen())[0]
+		l = struct.unpack('>I', self.recvLen())[0]
 		if l: body = json.loads(self.recvLen(l).decode('UTF-8'))
 		else: body = {}
 		return head, body

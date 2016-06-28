@@ -1660,7 +1660,26 @@ class Ratcatcher(Action, Reserve):
 		super(Ratcatcher, self).onPileCreate(pile, session, **kwargs)
 		Reserve.onPileCreate(self, pile, session, **kwargs)
 		
-adventures = [CoinOfTheRealm, Page, Peasant, Ratcatcher]
+class Raze(Action):
+	name = 'Raze'
+	def __init__(self, session, **kwargs):
+		super(Raze, self).__init__(session, **kwargs)
+		self.coinPrice.set(2)
+	def onPlay(self, player, **kwargs):
+		super(Raze, self).onPlay(player, **kwargs)
+		options = [self.card]+[o for o in player.hand]
+		choice = options[player.user(options, 'Choose trash')]
+		if choice==self.card: card = player.resolveEvent(Trash, frm=player.inPlay, card=choice)
+		else: card = player.resolveEvent(Trash, frm=player.hand, card=choice)
+		cards = player.resolveEvent(RequestCards, amnt=card.coinPrice.access())
+		card = player.selectCard(frm=cards)
+		if not card: return
+		for c in cards:
+			if c==card: player.resolveEvent(MoveCard, frm=player.library, to=player.hand, card=c)
+			else: player.resolveEvent(Discard, frm=player.library, card=c)
+		
+		
+adventures = [CoinOfTheRealm, Page, Peasant, Ratcatcher, Raze]
 
 class Potion(Treasure):
 	name = 'Potion'
