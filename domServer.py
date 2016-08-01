@@ -30,10 +30,11 @@ class PPlayer(Player):
 		self.payload = None
 		self.answer = None
 		self.userAddress = None
-	def juse(self, options, name='noName'):
+	def juse(self, options, name='noName', source=None):
 		for player in self.game.players: player.oplayer.sendJson('UPDT', player.jsonUI())
 		if len(options)==1 or not self.game.running: return 0
-		self.payload = {'name': name, 'options': options}
+		#self.payload = {'name': name, 'options': }
+		self.payload = {'name': name, 'options': options, 'source': gN(source)}
 		self.oplayer.sendJson('QUES', self.payload)
 		self.useLock.acquire()
 		self.payload = None

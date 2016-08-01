@@ -36,9 +36,11 @@ class InputBuffer(object):
 	
 ipbuf = InputBuffer()
 	
-def testUser(options, name='noName'):
+def testUser(options, name='noName', source=None):
 	if not name=='buySelection':
-		logw.addstr('-?'+name, end=': ')
+		st = '-?'+name
+		if not source=='None': st+='('+source+')'
+		logw.addstr(st, end=': ')
 		for option in options: logw.addstr(gN(option), end=', ')
 	else: logw.addstr('-?---Choose buy---')
 	choicePosition = -2
@@ -152,6 +154,7 @@ class NetInput(ScrollWithInput):
 		elif s and string=='rupd': sendPack(s, 'RUPD')
 		elif s and string=='rque': sendPack(s, 'RQUE')
 		elif s and string=='reco': sendPack(s, 'RECO')
+		elif s and string=='conc': sendPack(s, 'CONC')
 		
 class GameInput(ScrollWithInput):
 	def command(self, string):
@@ -348,7 +351,7 @@ def updt(signal, **kwargs):
 	logw.addstr('')
 	
 def answer(**kwargs):
-	sendPack(s, 'ANSW', {'index': testUser(kwargs['options'], kwargs['name'])})
+	sendPack(s, 'ANSW', {'index': testUser(kwargs['options'], kwargs['name'], kwargs['source'])})
 	#s.send(struct.pack('I', testUser(kwargs['options'], kwargs['name'])))
 	
 def recvLen(s, l=4):
@@ -375,7 +378,7 @@ def lyt(**kwargs):
 	while True:
 		head, body = recvPack(s)
 		if head=='QUES':
-			aF = traa(answer, name=body['name'], options=body['options'])
+			aF = traa(answer, name=body['name'], options=body['options'], source=body['source'])
 			aF.start()
 		elif head=='UPDT':
 			player.upd(body['player'])

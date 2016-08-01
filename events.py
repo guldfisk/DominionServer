@@ -146,7 +146,7 @@ class CastCard(Event):
 		if not hasattr(self, 'to'): self.to = self.player.inPlay
 	def check(self, **kwargs):
 		card = self.spawnTree(MoveCard).resolve()
-		if not card: return
+		if not card: return True
 	def payload(self, **kwargs):
 		self.spawnTree(PlayCard).resolve()
 		return True
@@ -308,7 +308,7 @@ class PurchaseFromPile(Event):
 	def setup(self, **kwargs):
 		self.card = self.frm.viewTop()
 	def check(self, **kwargs):
-		if not self.card: return
+		if not self.card: return True
 	def payload(self, **kwargs):
 		return self.spawnTree(Purchase).resolve()
 		
@@ -405,13 +405,13 @@ class DoubleMoney(Event):
 class TakeMinusDraw(Event):
 	name = 'TakeMinusDraw'
 	def check(self, **kwargs):
-		if self.player.minusDraw: return False
+		if self.player.minusDraw: return True
 	def payload(self, **kwargs):
 		self.player.minusDraw = True
 		
 class TakeMinusCoin(Event):
 	name = 'TakeMinusCoin'
 	def check(self, **kwargs):
-		if self.player.minusCoin: return False
+		if self.player.minusCoin: return True
 	def payload(self, **kwargs):
 		self.player.minusCoin = True

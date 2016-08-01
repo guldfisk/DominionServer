@@ -63,7 +63,7 @@ def gN(ob):
 	elif hasattr(ob, 'getView'): return ob.getView()
 	else: return str(ob)
 	
-def testUser(options):
+def testUser(options, source=None):
 	for option in options: print(gN(option), end=', ')
 	choicePosition = -2
 	while choicePosition<-1:
@@ -139,7 +139,7 @@ class Game(EventSession):
 		self.round = 0
 		self.dp.connect(self.evLogger)
 		for player in self.players: self.dp.connect(player.toPlayer)
-		self.dp.send(signal='globalSetup', players=self.players)
+		self.dp.send(signal='globalSetup', players=[o.view() for o in self.players])
 		self.resolveTriggerQueue()
 		for player in self.players: player.setup(self)
 		while self.running:
@@ -374,7 +374,7 @@ class Player(object):
 		eventWhiteList = ['Gain', 'Discard', 'Destroy', 'Trash', 'PlayCard', 'AddCoin', 'AddPotion', 'AddDebt', 'AddBuy', 'AddAction', 'AddVictory', 'Buy', 'BuyDEvent', 'Draw', 'PayDebt', 'Reveal', 'ResolveAttack', 'MoveToken', 'ResolveDuration', 'Message', 'DiscardDeck', 'AddToken', 'ReturnCard', 'PutBackCard', 'Take', 'TakeMinusDraw', 'TakeMinusCoin', 'FlipJourney']
 		whiteList = ['treasurePhase', 'actionPhase', 'buyPhase', 'globalSetup', 'beginRound', 'setup', 'startTurn', 'endTurn', 'turnEnded', 'sessionEnd']
 		keyBlackList = ['signal', 'source', 'session', 'hasReplaced', 'hidden', 'censored']
-		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'points', 'winner', 'flags', 'round']
+		keyWhiteList = ['card', 'frm', 'to', 'content', 'amnt', 'player', 'players', 'points', 'winner', 'flags', 'round']
 		if signal in whiteList: s = [signal, {}]
 		elif signal[-6:]=='_begin' and signal[:-6] in eventWhiteList: s = [signal[:-6], {}]
 		else: return
@@ -384,7 +384,7 @@ class Player(object):
 		if 'censored' in kwargs: censored = kwargs['censored']
 		for key in kwargs:
 			if key in keyWhiteList and not (key in keyBlackList or (hidden and hidden!=self and key in censored) or (key=='card' and 'to' in kwargs and 'frm' in kwargs and not kwargs['to'].canSee(self) and not kwargs['frm'].canSee(self))): s[1][key] = gN(kwargs[key])
-		#if signal=='globalSetup': s[1]['you'] = self.name
+		if signal=='globalSetup': s[1]['you'] = self.name
 		self.channelOut(s[0], **s[1])
 	def setup(self, session, **kwargs):
 		session.dp.send(signal='setup', player=self)
@@ -473,7 +473,7 @@ class Player(object):
 		self.calcVP()
 	def sessionEnd(self, **kwargs):
 		self.session = None
-	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, minimum=0, maximum=0, **kwargs):
+	def selectCards(self, amnt=None, frm=None, optional=False, message='Choose cards', restriction=None, minimum=0, maximum=0, source=None, **kwargs):
 		if frm==None: frm=self.hand
 		options = [o for o in copy.copy(frm) if not(restriction and not restriction(o))]
 		if not options: return []
@@ -481,9 +481,9 @@ class Player(object):
 		def select():
 			if not options or maximum and len(chosen)>=maximum: return True
 			if optional and len(chosen)>=minimum:
-				choice = self.user([o.view() for o in options]+['Done choosing'], message)
+				choice = self.user([o.view() for o in options]+['Done choosing'], message, source=source)
 				if choice+1>len(options): return True
-			else: choice = self.user([o.view() for o in options], message)
+			else: choice = self.user([o.view() for o in options], message, source=source)
 			chosen.append(options.pop(choice))
 		if amnt!=None:
 			for i in range(amnt):
@@ -491,37 +491,37 @@ class Player(object):
 		else:
 			while not select(): pass
 		return chosen
-	def selectCard(self, frm=None, optional=False, message='Choose card', restriction=None, **kwargs):
+	def selectCard(self, frm=None, optional=False, message='Choose card', restriction=None, source=None, **kwargs):
 		if frm==None: frm=self.hand
 		if not frm: return
 		frm = [o for o in frm if not (restriction and not restriction(o))]
 		if not frm: return
 		if optional:
-			choice = self.user([o.view() for o in frm]+['Done choosing'], message)
+			choice = self.user([o.view() for o in frm]+['Done choosing'], message, source=source)
 			if choice+1>len(frm): return
 		else: choice = self.user([o.view() for o in frm], message)
 		return frm[choice]
-	def selectPile(self, optional=False, restriction=False, **kwargs):
+	def selectPile(self, optional=False, restriction=False, source=None, **kwargs):
 		options = []
 		for key in self.session.piles:
 			if not (restriction and not restriction(self.session.piles[key].maskot)): options.append(key)
 		if not options: return
 		if optional:
-			choice = self.user(options+['No pile'], 'Choose pile')
+			choice = self.user(options+['No pile'], 'Choose pile', source=source)
 			if choice+1>len(options): return
 		else: choice = self.user(options, 'Choose pile')
 		return self.session.piles[options[choice]]
-	def getPile(self, optional=False, restriction=None, **kwargs):
+	def getPile(self, optional=False, restriction=None, source=None, **kwargs):
 		options = []
 		for key in self.session.piles:
 			if self.session.piles[key].viewTop() and not (restriction and not restriction(self.session.piles[key].viewTop())): options.append(key)
 		if not options: return
 		if optional:
-			choice = self.user(options+['No pile'], 'Choose pile')
+			choice = self.user(options+['No pile'], 'Choose pile', source=source)
 			if choice+1>len(options): return
-		else: choice = self.user(options, 'Choose pile')
+		else: choice = self.user(options, 'Choose pile', source=source)
 		return self.session.piles[options[choice]]
-	def pileCostingLess(self, coins=0, potions=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
+	def pileCostingLess(self, coins=0, potions=0, debt=0, card=None, optional=False, restriction=None, source=None, **kwargs):
 		if card:
 			coins += card.coinPrice.access()
 			potions += card.potionPrice.access()
@@ -531,11 +531,11 @@ class Player(object):
 			if self.session.piles[key].viewTop() and self.session.piles[key].viewTop().costLessThan(coins, potions, debt) and not (restriction and not restriction(self.session.piles[key].viewTop())): options.append(key)
 		if not options: return
 		if optional:
-			choice = self.user(options+['No pile'], 'Choose pile')
+			choice = self.user(options+['No pile'], 'Choose pile', source=source)
 			if choice+1>len(options): return
-		else: choice = self.user(options, 'Choose pile')
+		else: choice = self.user(options, 'Choose pile', source=source)
 		return self.session.piles[options[choice]]
-	def pileCosting(self, coins=0, potions=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
+	def pileCosting(self, coins=0, potions=0, debt=0, card=None, optional=False, restriction=None, source=None, **kwargs):
 		if card:
 			coins += card.coinPrice.access()
 			potions += card.potionPrice.access()
@@ -545,18 +545,15 @@ class Player(object):
 			if self.session.piles[key].viewTop() and self.session.piles[key].viewTop().costEqualTo(coins, potions, debt) and not (restriction and not restriction(self.session.piles[key].viewTop())): options.append(key)
 		if not options: return
 		if optional:
-			choice = self.user(options+['No pile'], 'Choose pile')
+			choice = self.user(options+['No pile'], 'Choose pile', source=source)
 			if choice+1>len(options): return
-		else: choice = self.user(options, 'Choose pile')
+		else: choice = self.user(options, 'Choose pile', source=source)
 		return self.session.piles[options[choice]]
-	def gainCostingLessThan(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
-		pile = self.pileCostingLess(coin, potion, debt, card, optional, restriction, **kwargs)
+	def gainCostingLessThan(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, source=None, **kwargs):
+		pile = self.pileCostingLess(coin, potion, debt, card, optional, restriction, source=source, **kwargs)
 		if pile: self.resolveEvent(GainFromPile, frm=pile, **kwargs)
-	def gainCosting(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, **kwargs):
-		pile = self.pileCosting(coin, potion, debt, card, optional, restriction, **kwargs)
-		if pile: self.resolveEvent(GainFromPile, frm=pile, **kwargs)
-	def gain(self, optional=False, restriction=False, **kwargs):
-		pile = self.getPile(optional, restriction, **kwargs)
+	def gainCosting(self, coin=0, potion=0, debt=0, card=None, optional=False, restriction=None, source=None, **kwargs):
+		pile = self.pileCosting(coin, potion, debt, card, optional, restriction, source=source, **kwargs)
 		if pile: self.resolveEvent(GainFromPile, frm=pile, **kwargs)
 	
 class Token(object):
@@ -659,7 +656,7 @@ def makeCard(session, tp, **kwargs):
 	v = tp(session, card=c, **kwargs)
 	c.setValues(v)
 	return c
-	
+
 class BaseCard(WithPAs):
 	ame = 'BaseCard'
 	def __init__(self, session, **kwargs):
@@ -713,7 +710,7 @@ class BaseCard(WithPAs):
 			potions = card.potionPrice.access()
 			debt = card.debtPrice.access()
 		return self.coinPrice.access()==coins and self.potionPrice.access()==potions and self.debtPrice.access()==debt
-	
+
 class DEvent(WithPAs):
 	name = 'BaseDEvent'
 	def __init__(self, session, **kwargs):
@@ -757,7 +754,7 @@ class Landmark(WithPAs):
 		return {'tokens': self.tokens.jview()}
 	def onGameEnd(self, player, **kwargs):
 		pass
-	
+
 class Treasure(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Treasure, self).__init__(session, **kwargs)
@@ -768,7 +765,7 @@ class Treasure(BaseCard):
 		super(Treasure, self).onPlay(player, **kwargs)
 		player.session.resolveEvent(AddCoin, player=player, amnt=self.coinValue.access())
 		player.session.resolveEvent(AddPotion, player=player, amnt=self.potionValue.access())
-		
+	
 class Victory(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Victory, self).__init__(session, **kwargs)
@@ -780,12 +777,12 @@ class Victory(BaseCard):
 		if len(session.players)>2: amnt = 12
 		else: amnt = 8
 		for i in range(amnt): pile.addCard(type(self))
-		
+
 class Action(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Action, self).__init__(session, **kwargs)
 		self.types.add('ACTION')
-		
+
 class Cursed(BaseCard):
 	def __init__(self, session, **kwargs):
 		super(Cursed, self).__init__(session, **kwargs)
@@ -793,12 +790,12 @@ class Cursed(BaseCard):
 		self.types.add('CURSED')
 	def onGameEnd(self, player, **kwargs):
 		return self.victoryValue.access()
-		
+
 class Reaction(object):
 	def __init__(self, session, **kwargs):
 		if not hasattr(self, 'types'): self.types = set()
 		self.types.add('REACTION')
-		
+
 class Attack(object):
 	def __init__(self, session, **kwargs):
 		if not hasattr(self, 'types'): self.types = set()
@@ -814,7 +811,7 @@ class Attack(object):
 		return results
 	def attack(self, player, **kwargs):
 		pass
-			
+	
 class Duration(object):
 	class DurationTrigger(DelayedTrigger):
 		name = 'DurationTrigger'
@@ -838,7 +835,7 @@ class Duration(object):
 		return
 	def duration(self, player, **kwargs):
 		pass
-			
+	
 class Reserve(object):
 	triggerSignal = ''
 	def __init__(self, session, **kwargs):
@@ -873,11 +870,11 @@ class Traveler(object):
 		owner.resolveEvent(TakeFromPile, frm=self.session.NSPiles[self.morph.name])
 	def onPileCreate(self, pile, session, **kwargs):
 		session.require(self.morph)
-	
+
 class Gathering(object):
 	def __init__(self, session, **kwargs):
 		if not hasattr(self, 'types'): self.types = set()
 		self.types.add('GATHERING')
-	
+
 if __name__=='__main__':
 	random.seed()

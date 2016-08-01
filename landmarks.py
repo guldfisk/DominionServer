@@ -138,7 +138,7 @@ class DefiledShrine(Landmark):
 	def resolveGain(self, **kwargs):
 		kwargs['player'].resolveEvent(TakeVPs, frm=self)
 	def conditionAction(self, **kwargs):
-		return 'ACTION' in kwargs['card']
+		return 'ACTION' in kwargs['card'].types
 	def resolveAction(self, **kwargs):
 		for token in kwargs['frm'].tokens:
 			if token.name=='VP Token':
@@ -234,7 +234,7 @@ class TriumphalArch(Landmark):
 		cards = [o.name for o in player.owns if 'ACTION' in o.types]
 		uniques = set(cards)
 		d = sorted([cards.count(key) for key in uniques])
-		if len(d)>1: return 2*d[-2]
+		if len(d)>1: return 3*d[-2]
 
 class Wall(Landmark):
 	name = 'Wall'

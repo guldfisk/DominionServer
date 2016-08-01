@@ -6,7 +6,7 @@ class Alms(DEvent):
 		if not self.checkBefore(player): return
 		for card in player.inPlay:
 			if 'TREASURE' in card.types: return
-		player.gainCostingLessThan(5, canBreak=False)
+		player.gainCostingLessThan(5, canBreak=False, source=self)
 	
 class Borrow(DEvent):
 	name = 'Borrow'
@@ -19,17 +19,17 @@ class Borrow(DEvent):
 class Quest(DEvent):
 	name = 'Quest'
 	def onBuy(self, player, **kwargs):
-		choice = player.user(('Attack', 'Two curses', 'Six cards'), 'Choose discard')
+		choice = player.user(('Attack', 'Two curses', 'Six cards'), 'Choose discard', source=self)
 		if choice==0:
-			card = player.selectCard(message='Choose discard', restriction=lambda o: 'ATTACK' in o.types)
+			card = player.selectCard(message='Choose discard', restriction=lambda o: 'ATTACK' in o.types, source=self)
 			if not card: return
 			player.resolveEvent(Discard, card=card)
 		elif choice==1:
-			cards = player.selectCards(2, message='Choose discard', restriction=lambda o: o.name=='Curse')
+			cards = player.selectCards(2, message='Choose discard', restriction=lambda o: o.name=='Curse', source=self)
 			if len(cards)<2: return
 			for card in cards: player.resolveEvent(Discard, card=card)
 		else:
-			cards = player.selectCards(6, message='Choose discard')
+			cards = player.selectCards(6, message='Choose discard', source=self)
 			if len(cards)<6: return
 			for card in cards: player.resolveEvent(Discard, card=card)
 		player.resolveEvent(GainFromPile, frm=player.session.piles['Gold'])
@@ -44,7 +44,7 @@ class Save(DEvent):
 	def onBuy(self, player, **kwargs):
 		if not self.checkBefore(player): return
 		player.resolveEvent(AddBuy)
-		card = player.selectCard(message='Choose save')
+		card = player.selectCard(message='Choose save', source=self)
 		if not card: return
 		player.resolveEvent(MoveCard, frm=player.hand, to=player.mats['Saving'], card=card)
 	def resolveBegin(self, **kwargs):
@@ -58,11 +58,11 @@ class ScoutingParty(DEvent):
 	def onBuy(self, player, **kwargs):
 		player.resolveEvent(AddBuy)
 		cards = player.resolveEvent(RequestCards, amnt=5)
-		chosen = player.selectCards(3, frm=cards, message='Choose discard')
+		chosen = player.selectCards(3, frm=cards, message='Choose discard', source=self)
 		for card in chosen: player.resolveEvent(Discard, frm=player.library, card=card)
 		remaining = [o for o in cards if not o in chosen]
 		while remaining:
-			card = player.selectCard(frm=remaining)
+			card = player.selectCard(frm=remaining, source=self)
 			remaining.remove(card)
 			player.resolveEvent(MoveCard, frm=player.library, to=player.library, card=card)
 
@@ -88,7 +88,7 @@ class Bonfire(DEvent):
 		super(Bonfire, self).__init__(session, **kwargs)
 		self.coinPrice.set(3)
 	def onBuy(self, player, **kwargs):
-		cards = player.selectCards(2, frm=player.inPlay, message='Choose trash')
+		cards = player.selectCards(2, frm=player.inPlay, message='Choose trash', source=self)
 		for card in cards: player.resolveEvent(Trash, frm=player.inPlay, card=card)
 		
 class Expedition(DEvent):
@@ -118,7 +118,7 @@ class TrashingToken(Token):
 	def conditionBuy(self, **kwargs):
 		return self.playerOwner and self.owner and kwargs['card'].frmPile==self.owner and kwargs['player']==self.playerOwner
 	def resolveBuy(self, **kwargs):
-		card = self.playerOwner.selectCard(optional=True, message='Choose trash')
+		card = self.playerOwner.selectCard(optional=True, message='Choose trash', source=self)
 		if card: self.playerOwner.resolveEvent(Trash, frm=self.playerOwner.hand, card=card)
 		
 class Ferry(DEvent):
@@ -129,7 +129,7 @@ class Ferry(DEvent):
 		session.addToken(MinusCost)
 	def onBuy(self, player, **kwargs):
 		token = player.tokens['Minus Cost']
-		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types, source=self)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
@@ -141,7 +141,7 @@ class Plan(DEvent):
 		session.addToken(TrashingToken)
 	def onBuy(self, player, **kwargs):
 		token = player.tokens['Trashing Token']
-		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types, source=self)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
@@ -184,7 +184,7 @@ class Pilgrimage(DEvent):
 	def onBuy(self, player, **kwargs):
 		if not (self.checkBefore(player) and player.resolveEvent(FlipJourney)): return
 		seen = set()
-		cards = player.selectCards(3, frm=[o for o in player.inPlay if not o.name in seen and not seen.add(o.name)], optional=True, message='Choose gain')
+		cards = player.selectCards(3, frm=[o for o in player.inPlay if not o.name in seen and not seen.add(o.name)], optional=True, message='Choose gain', source=self)
 		for card in cards: player.resolveEvent(GainFromPile, frm=self.session.piles[card.name])
 
 class Ball(DEvent):
@@ -194,7 +194,7 @@ class Ball(DEvent):
 		self.coinPrice.set(5)
 	def onBuy(self, player, **kwargs):
 		player.resolveEvent(TakeMinusCoin)
-		for i in range(2): player.gainCostingLessThan(5)
+		for i in range(2): player.gainCostingLessThan(5, source=self)
 		
 class Raid(DEvent):
 	name = 'Raid'
@@ -225,7 +225,7 @@ class Trade(DEvent):
 		super(Trade, self).__init__(session, **kwargs)
 		self.coinPrice.set(5)
 	def onBuy(self, player, **kwargs):		
-		cards = player.selectCards(2, optional=True, message='Choose trash')
+		cards = player.selectCards(2, optional=True, message='Choose trash', source=self)
 		for card in cards: player.resolveEvent(Trash, frm=player.hand, card=card)
 		for card in cards: player.resolveEvent(GainFromPile, frm=self.session.piles['Silver'])
 		
@@ -237,7 +237,7 @@ class LostArts(DEvent):
 		session.addToken(PlusAction)
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Action Token']
-		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types, source=self)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
@@ -249,7 +249,7 @@ class Training(DEvent):
 		session.addToken(PlusCoin)
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Coin Token']
-		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types, source=self)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 
@@ -309,7 +309,7 @@ class Pathfinding(DEvent):
 		session.addToken(PlusCard)
 	def onBuy(self, player, **kwargs):		
 		token = player.tokens['Plus Card Token']
-		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'ACTION' in o.types, source=self)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)
 	
@@ -324,7 +324,7 @@ class Summon(DEvent):
 		self.connectCondition(Trigger, trigger='startTurn', source=self, resolve=self.resolveBegin)
 		self.connectCondition(Replacement, trigger='Gain', source=self, resolve=self.resolveGain, condition=self.conditionGain)
 	def onBuy(self, player, **kwargs):
-		player.gainCostingLessThan(5, source=self, restriction=lambda o: 'ACTION' in o.types)
+		player.gainCostingLessThan(5, restriction=lambda o: 'ACTION' in o.types, source=self)
 	def resolveBegin(self, **kwargs):
 		for card in copy.copy(kwargs['player'].mats['Summoning']): kwargs['player'].resolveEvent(CastCard, frm=kwargs['player'].mats['Summoning'], card=card)
 	def conditionGain(self, **kwargs):
@@ -371,7 +371,7 @@ class Annex(DEvent):
 		super(Annex, self).__init__(session, **kwargs)
 		self.debtPrice.set(8)
 	def onBuy(self, player, **kwargs):		
-		cards = player.selectCards(frm=player.discardPile, message='Choose not shuffle', amnt=5, optional=True)
+		cards = player.selectCards(frm=player.discardPile, message='Choose not shuffle', amnt=5, optional=True, source=self)
 		for card in copy.copy(player.discardPile):
 			if not card in cards: player.resolveEvent(MoveCard, frm=player.discardPile, to=player.library, card=card)
 		player.resolveEvent(Shuffle)
@@ -385,7 +385,7 @@ class Donate(DEvent):
 		def resolve(self, **kwargs):
 			for card in copy.copy(self.player.library): self.player.resolveEvent(MoveCard, frm=self.player.library, to=self.player.hand, card=card)
 			for card in copy.copy(self.player.discardPile): self.player.resolveEvent(MoveCard, frm=self.player.discardPile, to=self.player.hand, card=card)
-			cards = self.player.selectCards(optional=True, message='Choose trash')
+			cards = self.player.selectCards(optional=True, message='Choose trash', source=self)
 			for card in cards: self.player.resolveEvent(Trash, frm=self.player.hand, card=card)
 			for card in copy.copy(self.player.hand): self.player.resolveEvent(MoveCard, frm=self.player.hand, to=self.player.library, card=card)
 			self.player.resolveEvent(Shuffle)
@@ -402,8 +402,8 @@ class Advance(DEvent):
 		super(Advance, self).__init__(session, **kwargs)
 		self.coinPrice.set(0)
 	def onBuy(self, player, **kwargs):
-		card = player.selectCard(optional=True, message='Choose trash', restriction=lambda o: 'ACTION' in o.types)
-		if card: player.gainCostingLessThan(7, restriction=lambda o: 'ACTION' in o.types)
+		card = player.selectCard(optional=True, message='Choose trash', restriction=lambda o: 'ACTION' in o.types, source=self)
+		if card: player.gainCostingLessThan(7, restriction=lambda o: 'ACTION' in o.types, source=self)
 		
 class Delve(DEvent):
 	name = 'Delve'
@@ -437,7 +437,7 @@ class Tax(DEvent):
 		self.coinPrice.set(2)
 		session.connectCondition(self.TaxSetup, source=self)
 	def onBuy(self, player, **kwargs):
-		pile = player.selectPile()
+		pile = player.selectPile(source=self)
 		for i in range(2): self.session.resolveEvent(AddToken, to=pile, token=DebtToken(self.session))
 	
 class Banquet(DEvent):
@@ -446,7 +446,7 @@ class Banquet(DEvent):
 		super(Banquet, self).__init__(session, **kwargs)
 		self.coinPrice.set(3)
 	def onBuy(self, player, **kwargs):
-		player.gainCostingLessThan(6, restrictio=lambda o: 'VICTORY' not in o.types)
+		player.gainCostingLessThan(6, restrictio=lambda o: 'VICTORY' not in o.types, source=self)
 		for i in range(2): player.resolveEvent(GainFromPile, frm=self.session.piles['Copper'])
 		
 class Ritual(DEvent):
@@ -456,7 +456,7 @@ class Ritual(DEvent):
 		self.coinPrice.set(4)
 	def onBuy(self, player, **kwargs):
 		if not player.resolveEvent(GainFromPile, frm=self.session.piles['Curse']): return
-		card = player.selectCard()
+		card = player.selectCard(message='Choose trash', source=self)
 		player.resolveEvent(AddVictory, amnt=player.coinPrice.access())
 		player.resolveEvent(Trash, frm=player.hand, card=card)
 		
@@ -467,7 +467,7 @@ class SaltTheEarth(DEvent):
 		self.coinPrice.set(4)
 	def onBuy(self, player, **kwargs):
 		player.resolveEvent(AddVictory)
-		pile = player.selectPile(restriction=lambda o: 'VICTORY' in o.types)
+		pile = player.selectPile(restriction=lambda o: 'VICTORY' in o.types, source=self)
 		card = pile.viewTop()
 		if card: player.resolveEvent(Trash, frm=pile, card=card)
 
