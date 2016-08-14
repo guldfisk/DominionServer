@@ -1669,6 +1669,7 @@ class Raze(Action):
 		self.coinPrice.set(2)
 	def onPlay(self, player, **kwargs):
 		super(Raze, self).onPlay(player, **kwargs)
+		player.resolveEvent(AddAction)
 		options = [self.card]+[o for o in player.hand]
 		choice = options[player.user([o.view() for o in options], 'Choose trash', source=self)]
 		if choice==self.card: card = player.resolveEvent(Trash, frm=player.inPlay, card=choice)
@@ -2011,7 +2012,7 @@ class ChariotRace(Action):
 		super(ChariotRace, self).__init__(session, **kwargs)
 		self.coinPrice.set(3)
 	def onPlay(self, player, **kwargs):
-		super(BustlingVillage, self).onPlay(player, **kwargs)
+		super(ChariotRace, self).onPlay(player, **kwargs)
 		player.resolveEvent(AddAction)
 		card = player.resolveEvent(RequestCard)
 		if not card: return
@@ -2416,7 +2417,7 @@ class Legionary(Action, Attack):
 		self.coinPrice.set(5)
 	def onPlay(self, player, **kwargs):
 		super(Legionary, self).onPlay(player, **kwargs)
-		player.resolveEvent(AddCoin, amnt=2)
+		player.resolveEvent(AddCoin, amnt=3)
 		card = player.selectCard(optional=True, message='Choose reveal', restriction=lambda o: o.name=='Gold', source=self)
 		if card: self.attackOpponents(player)
 	def attack(self, player, **kwargs):
