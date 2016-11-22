@@ -2193,7 +2193,7 @@ class SmallCastle(Action, Victory, Castle):
 	def onPlay(self, player, **kwargs):
 		super(SmallCastle, self).onPlay(player, **kwargs)
 		options = [self.card]+[o for o in player.hand if 'CASTLE' in o.types]
-		choice = options[player.user(options, 'Choose trash', source=self)]
+		choice = options[player.user([o.view() for o in options], 'Choose trash', source=self)]
 		if choice==self.card: card = player.resolveEvent(Trash, frm=player.inPlay, card=choice)
 		else: card = player.resolveEvent(Trash, frm=player.hand, card=choice)
 		if card: player.resolveEvent(GainFromPile, frm=self.session.piles['Castles'])

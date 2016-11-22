@@ -214,7 +214,7 @@ class Seaway(DEvent):
 		session.addToken(PlusBuy)
 	def onBuy(self, player, **kwargs):
 		token = player.tokens['Plus Buy Token']
-		pile = player.getPile(restriction=lambda o: 'ACTION' in o.types)
+		pile = player.pileCostingLess(5, restriction=lambda o: 'ACTION' in o.types)
 		player.resolveEvent(GainFromPile, frm=pile)
 		if token.owner: player.resolveEvent(MoveToken, frm=token.owner, to=pile, token=token)
 		else: player.resolveEvent(AddToken, to=pile, token=token)

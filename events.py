@@ -1,5 +1,6 @@
 from FullEvent import *
 import random
+import numpy as np
 
 class TriggerThisTurn(Continuous, Trigger):
 	name = 'BaseThisTurn'

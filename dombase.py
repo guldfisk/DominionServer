@@ -4,6 +4,7 @@ import math as m
 import copy
 import types
 from events import *
+import numpy as np
 
 class probMap(list):
 	def get(self, val):

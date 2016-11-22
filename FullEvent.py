@@ -1,6 +1,5 @@
 from pydispatch import dispatcher as dp
 import copy
-import numpy as np
 
 def dictMerge(*dicts):
 	result = {}
@@ -49,7 +48,6 @@ class EventSession(object):
 		while self.stack:
 			trigger = self.stack.pop()
 			trigger[0].resolve(**trigger[1])
-			#trigger[0].resolve(circumstance=trigger[1])
 		
 def replaceOrder(options):
 	return 0
