@@ -221,7 +221,6 @@ class WithPAs(object):
 class TestEvent(Event):
 	name = 'TestEvent'
 	def payload(self, **kwargs):
-		super(TestEvent, self).payload(**kwargs)
 		print(self.name+' payload from '+str(id(self)))
 
 class TestEvent2(TestEvent):
@@ -243,14 +242,14 @@ class TestTrigger(Trigger):
 	name = 'TestTrigger'
 	defaultTrigger = 'TestEvent'
 	def resolve(self, **kwargs):
-		self.session.resolveEvent(TestEvent2, **kwargs)
+		self.session.resolveEvent(TestEvent2)
 	
 def evLogger(signal, **kwargs):
 	print('>'+signal+':: '+str(list(kwargs)))
 	
 if __name__=='__main__':
 	ses = EventSession()
-	ses.dp.connect(evLogger)
+	#ses.dp.connect(evLogger)
 	#tr = TestReplacement(ses)
 	#tr.connect()
 	ses.connectCondition(TestReplacement)
@@ -258,8 +257,7 @@ if __name__=='__main__':
 	#tr2 = TestReplacement2(ses)
 	#tr2.connect()
 	
-	#tri = TestTrigger(ses)
-	#tri.connect()
+	ses.connectCondition(TestTrigger)
 	
 	ses.resolveEvent(TestEvent)
 	#ses.resolveEvent(TestEvent)
