@@ -12,10 +12,12 @@ import pickle
 import re
 import json
 
-s = None
-name = None
-PORT = 6700
-HOST = 'localhost'
+class Values(object):
+	s = None
+	name = None
+	PORT = 6700
+	HOST = 'localhost'
+	me = None
 
 def gN(ob):
 	if hasattr(ob, 'playerName'): return ob.playerName
@@ -121,40 +123,37 @@ class ScrollWithInput(object):
 		
 class NetInput(ScrollWithInput):
 	def setName(self, n):
-		sendPack(s, 'NAME', {'name': n})
+		sendPack(Values.s, 'NAME', {'name': n})
 	def command(self, string):
 		#log('COMMAND', string, string=='conn')
 		if re.match('host ?.+', string, re.IGNORECASE):
-			global HOST
-			HOST = re.match('host ?(.+)', string, re.IGNORECASE).groups()[0]
+			Values.HOST = re.match('host ?(.+)', string, re.IGNORECASE).groups()[0]
 			updateNetstat()
 		elif string=='conn':
-			global s
-			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.connect((HOST, PORT))
+			Values.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			Values.s.connect((Values.HOST, Values.PORT))
 			l = traa(lyt)
 			l.start()
-			if name: self.setName(name)
+			if Values.name: self.setName(Values.name)
 			updateNetstat()
 		#elif string=='conc':
 		#	ipbuf.add('')
 		#	s.send(string.encode('UTF-8'))
 		elif re.match('name ?.+', string, re.IGNORECASE):
 			n = re.match('name ?(.+)', string, re.IGNORECASE).groups()[0]
-			if s: self.setName(n)
+			if Values.s: self.setName(n)
 			else:
-				global name
-				name = n
-		elif s and re.match('game.*', string, re.IGNORECASE):
+				Values.name = n
+		elif Values.s and re.match('game.*', string, re.IGNORECASE):
 			m = re.match('game(.+)', string, re.IGNORECASE)
 			if m: k = m.groups()[0]
 			else: k = ''
-			sendPack(s, 'GAME', {'kingdom': k})
-		elif s and string=='debu': sendPack(s, 'DEBU')
-		elif s and string=='rupd': sendPack(s, 'RUPD')
-		elif s and string=='rque': sendPack(s, 'RQUE')
-		elif s and string=='reco': sendPack(s, 'RECO')
-		elif s and string=='conc': sendPack(s, 'CONC')
+			sendPack(Values.s, 'GAME', {'kingdom': k})
+		elif Values.s and string=='debu': sendPack(Values.s, 'DEBU')
+		elif Values.s and string=='rupd': sendPack(Values.s, 'RUPD')
+		elif Values.s and string=='rque': sendPack(Values.s, 'RQUE')
+		elif Values.s and string=='reco': sendPack(Values.s, 'RECO')
+		elif Values.s and string=='conc': sendPack(Values.s, 'CONC')
 		
 class GameInput(ScrollWithInput):
 	def command(self, string):
@@ -328,20 +327,18 @@ def nstart(stdscr):
 		
 def updateNetstat():
 	netstatw.clear()
-	netstatw.addstr(str(HOST)+', '+str(PORT)+', '+str(s))
+	netstatw.addstr(str(Values.HOST)+', '+str(Values.PORT)+', '+str(Values.s))
 	netstatw.refresh()
 	
 def request(head):
-	s.send(('requ'+head).encode('UTF-8'))
-		
-me = None
+	Values.s.send(('requ'+head).encode('UTF-8'))
+
 		
 def updt(signal, **kwargs):
-	global me
 	if signal=='startTurn':
 		logw.addstr('-'*36)
 	if signal=='globalSetup':
-		if 'you' in kwargs: me = kwargs['you']
+		if 'you' in kwargs: Values.me = kwargs['you']
 	elif signal=='beginRound':
 		logw.addstr('*'*36)
 	logw.addstr('>'+signal, end='::'+' '*(18-len(signal)))
@@ -351,7 +348,7 @@ def updt(signal, **kwargs):
 	logw.addstr('')
 	
 def answer(**kwargs):
-	sendPack(s, 'ANSW', {'index': testUser(kwargs['options'], kwargs['name'], kwargs['source'])})
+	sendPack(Values.s, 'ANSW', {'index': testUser(kwargs['options'], kwargs['name'], kwargs['source'])})
 	#s.send(struct.pack('I', testUser(kwargs['options'], kwargs['name'])))
 	
 def recvLen(s, l=4):
@@ -376,7 +373,7 @@ def sendPack(s, head, content=None):
 	
 def lyt(**kwargs):
 	while True:
-		head, body = recvPack(s)
+		head, body = recvPack(Values.s)
 		if head=='QUES':
 			aF = traa(answer, name=body['name'], options=body['options'], source=body['source'])
 			aF.start()
@@ -396,13 +393,12 @@ def lyt(**kwargs):
 			updt(n, **body)
 		
 def main():
-	global s
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.connect((HOST, PORT))
+	Values.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	Values.s.connect((Values.HOST, Values.PORT))
 	l = traa(lyt)
 	l.start()
-	ts = traa(tilServer)
-	ts.start()
+	# ts = traa(tilServer)
+	# ts.start()
 
 if __name__ == '__main__':
 	curses.wrapper(nstart)
