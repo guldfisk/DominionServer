@@ -211,6 +211,16 @@ def run():
 	ct.serve_forever()
 	#
 
+def run_daemon():
+	import daemon
+	with daemon.DaemonContext():
+		run()
+
+def main():
+	if len(sys.argv)>1 and sys.argv[1]=='daemon':
+		run_daemon()
+	else:
+		run()
 
 if __name__=='__main__':
-	run()
+	main()
