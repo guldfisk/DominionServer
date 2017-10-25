@@ -25,8 +25,6 @@ class CST(threading.Thread):
 	def __init__(self, **kwargs):
 		threading.Thread.__init__(self)
 		self.conn = kwargs['conn']
-		self.addr = kwargs['addr']
-		self.oaddr = kwargs['oaddr']
 		self.defaultRecvLen = kwargs.get('drl', 8192)
 		self.running = True
 		self.parent = kwargs.get('parent', None)
@@ -35,7 +33,6 @@ class CST(threading.Thread):
 			data = self.recvLen()
 			if data==b'':
 				print('recived empty string')
-				self.kill()
 				break
 			self.command(data)
 	def command(self, ind):
@@ -126,19 +123,15 @@ def sendToAll(ind):
 	for key in csts:
 		csts[key].send(ind)
 			
-def checkAll():
-	for key in csts:
-		if not (csts[key].isAlive() and csts[key].running):
-			print('Del '+key)
-			del csts[self.addr]
-			
 def killAll():
 	print('killing all')
 	global ct
 	for key in csts:
 		csts[key].running = False
 	ct.running = False
-idcnt = 0		
+
+idcnt = 0
+
 class clientThread(threading.Thread):
 	def __init__(self, socket=None, CST=CST):
 		threading.Thread.__init__(self)
@@ -161,7 +154,19 @@ class clientThread(threading.Thread):
 			csts[adr].start()
 			print(csts)
 
-ct = clientThread()
+class Server(object):
+	def __init__(self, connection: socket.socket, handler):
+		self.socket = connection
+		self.handler = handler
+		self._running = False
+	def serve_forever(self):
+		self._running = True
+		while self._running:
+			connection, adress = self.socket.accept()
+			handler = self.handler(conn=connection)
+			handler.daemon = True
+			handler.start()
+
 
 def rec(bindArg=''):
 	global inds

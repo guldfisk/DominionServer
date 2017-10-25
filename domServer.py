@@ -8,6 +8,7 @@ import threading
 import struct
 import socket
 import json
+import socketserver
 
 class traa(threading.Thread):
 	def __init__(self, f, **kwargs):
@@ -45,7 +46,6 @@ class PPlayer(Player):
 		self.useLock.release()
 	def gameEnd(self, **kwargs):
 		super(PPlayer, self).gameEnd(**kwargs)
-		del playerConnections[self.oplayer.oaddr]
 		self.oplayer.player = None
 		self.answer = None
 		self.useLock.release()
@@ -54,17 +54,15 @@ class OnlinePlayer(server.CST):
 	def __init__(self, **kwargs):
 		super(OnlinePlayer, self).__init__(**kwargs)
 		server.CST.__init__(self, **kwargs)
+		self.lobby = None
 		self.playerName = 'p'+str(server.idcnt)
 		self.defaultRecvLen = 4
 		self.player = None
 		self.indents = []
 		self.sendJson('CONN')
-		#self.deventPM = probMap((0.1, 0.5, 0.4))
-		#self.landmarkPM = probMap((0.1, 0.5, 0.4))
-	def linkPlayer(self, player):
+	def link_player(self, player):
 		self.player = player
 		player.oplayer = self
-		player.userAdress = self.addr
 		player.name = self.playerName
 		player.channelOut = self.jchannelOut
 		player.uiupdate = self.uiupFunc
@@ -92,34 +90,6 @@ class OnlinePlayer(server.CST):
 		if signal[-6:]=='_begin': self.indents.append(signal[:-6])
 		elif signal in self.indents: self.indents.remove(signal)
 		print('>'+'|\t'*len(self.indents)+signal+':: '+str(list(kwargs)))
-	def makeGame(self, allCards=False, printEvents=False, kingdom='', **kwargs):
-		players = []
-		for key in server.csts:
-			if server.csts[key].player==None:
-				player = PPlayer()
-				server.csts[key].linkPlayer(player)
-				playerConnections[server.csts[key].oaddr] = player
-				players.append(player)
-		if not players: return
-		game = Game(players=players)
-		games.append(game)
-		for player in game.players:	player.game = game
-		#options = baseSet+prosperity+seaside+adventures+alchemy+hinterlands+empires
-		options = baseSet+seaside+darkages+adventures+alchemy+empires+prosperity
-		allDEvents = adventuresDEvents+promoDEvents+empiresDEvents
-		landmarks = empiresLandmarks
-		if allCards:
-			game.makePiles(baseSetBase)
-			options += testCards
-			game.makePiles(options)
-			game.makeDEvents(allDEvents)
-			game.makeLandmarks(landmarks)
-		else:
-			makeGame(game, baseSetBase, cardSetsD, deventSetsD, landSetsD, kingdom)
-		if printEvents: game.dp.connect(self.evLogger)
-		game.makeStartDeck()
-		gT = traa(game.start)
-		gT.start()
 	def recvPack(self):
 		head = self.recvLen().decode('UTF-8')
 		l = struct.unpack('>I', self.recvLen())[0]
@@ -135,19 +105,25 @@ class OnlinePlayer(server.CST):
 				break
 			self.command(head, body)
 	def command(self, head, body):
-		if head=='GAME': self.makeGame(kingdom=body['kingdom'])
-		elif head=='TEST': self.makeGame(True)
-		elif head=='DEBU': self.makeGame(True, True)
-		elif head=='RECO':
-			print(self.oaddr, playerConnections)
-			if not self.oaddr in list(playerConnections): return
-			self.linkPlayer(playerConnections[self.oaddr])
-			if self.player.payload: self.sendJson('QUES', self.player.payload)
+		if head=='GAME' and self.lobby: self.lobby.start_game(kingdom=body['kingdom'])
+		# elif head=='TEST': self.makeGame(True)
+		# elif head=='DEBU': self.makeGame(True, True)
+		# elif head=='RECO':
+		# 	print(self.oaddr, playerConnections)
+		# 	if not self.oaddr in list(playerConnections): return
+		# 	self.linkPlayer(playerConnections[self.oaddr])
+		# 	if self.player.payload: self.sendJson('QUES', self.player.payload)
 		elif head=='CONC': self.player.game.concede(self.player)
 		elif head=='NAME' and 'name' in body: self.playerName = body['name']
 		elif head=='ANSW' and self.player: self.player.answerF(body['index'])
 		elif head=='RUPD' and self.player: self.sendJson('UPDT', self.player.jsonUI())
 		elif head=='RQUE' and self.player: self.sendJson('QUES', self.player.payload)
+		elif head=='CLOB' and 'name' in body:
+			if body['name'] in Lobby.open_lobbies:
+				Lobby.open_lobbies[body['name']].join(self)
+			else:
+				Lobby(body['name'], self).publish()
+		elif head=='JLOB' and 'name' in body and body['name'] in Lobby.open_lobbies: Lobby.open_lobbies[body['name']].join(self)
 	def use(self, options, name='noName'):
 		payload = pickle.dumps((name, options))
 		self.send('ques'.encode('UTF-8')+struct.pack('I', len(payload))+payload)
@@ -155,19 +131,86 @@ class OnlinePlayer(server.CST):
 		self.useLock.acquire()
 		if self.answer in range(len(options)): return self.answer
 		else: return len(options)-1
-	
-if __name__=='__main__':
+
+class Lobby(object):
+	open_lobbies = dict()
+	def __init__(self, name: str, host: OnlinePlayer):
+		self._name = name
+		self.players = set()
+		self.host = host
+		self.join(host)
+	def publish(self):
+		Lobby.open_lobbies[self._name] = self
+	def join(self, player: OnlinePlayer):
+		if player.lobby is not None:
+			player.lobby.leave(player)
+		self.players.add(player)
+		player.lobby = self
+	def leave(self, player: OnlinePlayer):
+		self.players.remove(player)
+		player.lobby = None
+	def start_game(self, all_cards=False, kingdom=''):
+		players = []
+		for player in self.players:
+			new_player = PPlayer()
+			player.link_player(new_player)
+			players.append(new_player)
+		game = Game(players=players)
+		for player in game.players:
+			player.game = game
+		options = baseSet+seaside+darkages+adventures+alchemy+empires+prosperity
+		allDEvents = adventuresDEvents+promoDEvents+empiresDEvents
+		landmarks = empiresLandmarks
+		if all_cards:
+			game.makePiles(baseSetBase)
+			options += testCards
+			game.makePiles(options)
+			game.makeDEvents(allDEvents)
+			game.makeLandmarks(landmarks)
+		else:
+			makeGame(game, baseSetBase, cardSetsD, deventSetsD, landSetsD, kingdom)
+		game.makeStartDeck()
+		gT = traa(game.start)
+		gT.start()
+		del Lobby.open_lobbies[self._name]
+	@property
+	def name(self):
+		return self._name
+	def __hash__(self):
+		return hash((self.__class__.__name__, self.name))
+	def __eq__(self, other):
+		return isinstance(other, self.__class__) and self._name == other.name
+
+class Handler(socketserver.BaseRequestHandler):
+	def handle(self):
+		print(self.request, type(self.request))
+		online_player = OnlinePlayer(conn=self.request)
+		online_player.daemon = True
+		online_player.start()
+		# data = self.request[0].strip()
+		# socket = self.request[1]
+		# print("{} wrote:".format(self.client_address[0]))
+		# print(data)
+
+cardSetsD = {key: {o.name: o for o in cardSets[key]} for key in cardSets}
+deventSetsD = {key: {o.name: o for o in deventSets[key]} for key in deventSets}
+landSetsD = {key: {o.name: o for o in landmarkSets[key]} for key in landmarkSets}
+
+def run():
 	random.seed()
-	HOST = str(socket.gethostbyname(socket.gethostname()))
+	HOST = ''
 	PORT = 6700
+	# server = socketserver.TCPServer((HOST, PORT), Handler)
+	# print(server)
+	# server.serve_forever()
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.bind(('', PORT))
+	s.bind((HOST, PORT))
 	print(HOST+' rec at '+str(PORT))
 	s.listen(1)
-	ct = server.clientThread(s, OnlinePlayer)
-	ct.start()
-	print('ct started')
-	cardSetsD = {key: {o.name: o for o in cardSets[key]} for key in cardSets}
-	deventSetsD = {key: {o.name: o for o in deventSets[key]} for key in deventSets}
-	landSetsD = {key: {o.name: o for o in landmarkSets[key]} for key in landmarkSets}
-	
+	ct = server.Server(s, OnlinePlayer)
+	ct.serve_forever()
+	#
+
+
+if __name__=='__main__':
+	run()

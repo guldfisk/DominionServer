@@ -149,6 +149,12 @@ class NetInput(ScrollWithInput):
 			if m: k = m.groups()[0]
 			else: k = ''
 			sendPack(Values.s, 'GAME', {'kingdom': k})
+		elif re.match('clob ?.+', string, re.IGNORECASE):
+			name = re.match('clob ?(.+)', string, re.IGNORECASE).groups()[0]
+			sendPack(Values.s, 'CLOB', {'name': name})
+		elif re.match('jlob ?.+', string, re.IGNORECASE):
+			name = re.match('jlob ?(.+)', string, re.IGNORECASE).groups()[0]
+			sendPack(Values.s, 'JLOB', {'name': name})
 		elif Values.s and string=='debu': sendPack(Values.s, 'DEBU')
 		elif Values.s and string=='rupd': sendPack(Values.s, 'RUPD')
 		elif Values.s and string=='rque': sendPack(Values.s, 'RQUE')
