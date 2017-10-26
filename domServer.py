@@ -199,7 +199,7 @@ landSetsD = {key: {o.name: o for o in landmarkSets[key]} for key in landmarkSets
 def run():
 	random.seed()
 	HOST = ''
-	PORT = 6700
+	PORT = 80
 	# server = socketserver.TCPServer((HOST, PORT), Handler)
 	# print(server)
 	# server.serve_forever()

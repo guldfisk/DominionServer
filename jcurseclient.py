@@ -15,7 +15,7 @@ import json
 class Values(object):
 	s = None
 	name = None
-	PORT = 6700
+	PORT = 80
 	HOST = 'localhost'
 	me = None
 
